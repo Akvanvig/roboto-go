@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"os"
 	"path"
 
@@ -8,17 +9,16 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func onCatJam(s *Session, i *InteractionCreate) {
+func onCatJam(i *InteractionCreate) (*Response, error) {
 	file, err := os.Open(path.Join(RootPath, "assets/img/catjam.gif"))
 
 	if err != nil {
-		s.InteractionRespond(i.Interaction, generateResponseError("Failed to open catjam asset", err))
-		return
+		return nil, errors.New("Failed to open catjam asset")
 	}
 
 	defer file.Close()
 
-	s.InteractionRespond(i.Interaction, &Response{
+	return &Response{
 		Type: ResponseMsg,
 		Data: &ResponseData{
 			Files: []*discordgo.File{
@@ -29,18 +29,19 @@ func onCatJam(s *Session, i *InteractionCreate) {
 				},
 			},
 		},
-	})
+	}, nil
 }
 
-// TODO(Fredrico):
-// We probably want to make a more efficient command adding API.
-// We also need a way to easily limit commands to a group of people (e.g admins)
 func init() {
-	Command{
-		State: Info{
-			Name:        "catjam",
-			Description: "Let's jam!",
+	generalCommands := &CommandMap{
+		"catjam": &Command{
+			State: CommandInfo{
+				Name:        "catjam",
+				Description: "Let's jam!",
+			},
+			Handler: onCatJam,
 		},
-		Handler: onCatJam,
-	}.add()
+	}
+
+	addCommands(generalCommands)
 }

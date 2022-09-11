@@ -10,13 +10,32 @@ import (
 
 var session *discordgo.Session
 
-func onReady(session *discordgo.Session, r *discordgo.Ready) {
-	log.Info().Msg(fmt.Sprintf("Connected as: %v#%v", session.State.User.Username, session.State.User.Discriminator))
+func onReady(s *discordgo.Session, r *discordgo.Ready) {
+	log.Info().Msg(fmt.Sprintf("Connected as: %v#%v", s.State.User.Username, s.State.User.Discriminator))
 }
 
-func onInteraction(session *discordgo.Session, i *discordgo.InteractionCreate) {
+func onInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if cmd, ok := commands.All[i.ApplicationCommandData().Name]; ok {
-		cmd.Handler(session, i)
+		var err error
+
+		if cmd.Check != nil {
+			err = cmd.Check(s, i)
+
+			if err != nil {
+				commands.SendErrorCheckFailed(s, i, err)
+				return
+			}
+		}
+
+		var res *commands.Response
+
+		res, err = cmd.Handler(i)
+
+		if err != nil {
+			commands.SendErrorInternal(s, i, err)
+		} else {
+			commands.SendResponse(s, i, res)
+		}
 	}
 }
 

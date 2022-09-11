@@ -6,6 +6,9 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
+
+	// Experimental official go package
+	"golang.org/x/exp/maps"
 )
 
 type (
@@ -15,12 +18,14 @@ type (
 	Response     = discordgo.InteractionResponse
 	ResponseData = discordgo.InteractionResponseData
 
-	Info    = discordgo.ApplicationCommand
-	Command struct {
-		State      Info
-		Handler    func(s *Session, i *InteractionCreate)
-		Registered bool
+	CommandInfo = discordgo.ApplicationCommand
+	Command     struct {
+		State      CommandInfo                                   // Required
+		Handler    func(i *InteractionCreate) (*Response, error) // Required
+		Check      func(s *Session, i *InteractionCreate) error  // Optional
+		Registered bool                                          // Not set
 	}
+	CommandMap = map[string]*Command
 )
 
 const (
@@ -33,21 +38,48 @@ const (
 	ResponseModal          = discordgo.InteractionResponseModal
 )
 
-var All = map[string]*Command{}
+var All = CommandMap{}
 
-func (cmd Command) add() {
-	All[cmd.State.Name] = &cmd
+func addCommands(commands *CommandMap) {
+	maps.Copy(All, *commands)
 }
 
-func generateResponseError(msg string, err error) *Response {
+// Note(Fredrico):
+// See https://github.com/bwmarrin/discordgo/blob/v0.26.1/structs.go#L1988 for permissions
+// TODO(Fredrico):
+// This needs to be improved with check addition
+func addCommandsAdvanced(commands *CommandMap, permissions int64) {
+	for _, val := range *commands {
+		val.State.DefaultMemberPermissions = &permissions
+	}
+
+	addCommands(commands)
+}
+
+func SendResponse(s *discordgo.Session, i *discordgo.InteractionCreate, response *Response) {
+	s.InteractionRespond(i.Interaction, response)
+}
+
+func SendErrorCheckFailed(s *discordgo.Session, i *discordgo.InteractionCreate, err error) {
 	errUUID := uuid.New().String()
+	log.Warn().Str("message", err.Error()).Str("uuid", errUUID).Err(err).Send()
 
-	log.Error().Str("message", msg).Str("uuid", errUUID).Err(err).Send()
+	SendResponse(s, i, &Response{
+		Type: ResponseMsg,
+		Data: &ResponseData{
+			Content: "Check failed, this incident will be reported",
+		},
+	})
+}
 
-	return &Response{
+func SendErrorInternal(s *discordgo.Session, i *discordgo.InteractionCreate, err error) {
+	errUUID := uuid.New().String()
+	log.Error().Str("message", err.Error()).Str("uuid", errUUID).Err(err).Send()
+
+	SendResponse(s, i, &Response{
 		Type: ResponseMsg,
 		Data: &ResponseData{
 			Content: fmt.Sprintf("An internal error occured, please provide the following UUID to the bot owner: %s", errUUID),
 		},
-	}
+	})
 }
