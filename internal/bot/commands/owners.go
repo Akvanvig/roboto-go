@@ -1,7 +1,7 @@
 package commands
 
 func init() {
-	ownerCommands := &CommandMap{}
+	ownerCommands := CommandMap{}
 
 	addCommands(ownerCommands)
 }

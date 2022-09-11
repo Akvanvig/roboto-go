@@ -33,7 +33,7 @@ func onCatJam(i *InteractionCreate) (*Response, error) {
 }
 
 func init() {
-	generalCommands := &CommandMap{
+	generalCommands := CommandMap{
 		"catjam": &Command{
 			State: CommandInfo{
 				Name:        "catjam",

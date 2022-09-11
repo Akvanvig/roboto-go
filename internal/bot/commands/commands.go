@@ -40,16 +40,16 @@ const (
 
 var All = CommandMap{}
 
-func addCommands(commands *CommandMap) {
-	maps.Copy(All, *commands)
+func addCommands(commands CommandMap) {
+	maps.Copy(All, commands)
 }
 
 // Note(Fredrico):
 // See https://github.com/bwmarrin/discordgo/blob/v0.26.1/structs.go#L1988 for permissions
 // TODO(Fredrico):
 // This needs to be improved with check addition
-func addCommandsAdvanced(commands *CommandMap, permissions int64) {
-	for _, val := range *commands {
+func addCommandsAdvanced(commands CommandMap, permissions int64) {
+	for _, val := range commands {
 		val.State.DefaultMemberPermissions = &permissions
 	}
 
