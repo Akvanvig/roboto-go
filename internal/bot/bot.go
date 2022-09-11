@@ -26,14 +26,36 @@ func initHandlers() {
 }
 
 func initCommands() {
+	log.Info().Msg("Initializing commands")
+
 	for name, cmd := range commands.All {
-		_, err := session.ApplicationCommandCreate(session.State.User.ID, "", &cmd.Info)
+		updatedState, err := session.ApplicationCommandCreate(session.State.User.ID, "", &cmd.State)
 
 		if err != nil {
-			log.Warn().Str("message", fmt.Sprintf("Could not create '%v' command: ", name)).Err(err).Send()
+			log.Error().Str("message", fmt.Sprintf("Could not create '%v' command: ", name)).Err(err).Send()
 		}
 
+		// Update command state
+		cmd.State = *updatedState
 		cmd.Registered = true
+	}
+}
+
+func delCommands() {
+	log.Info().Msg("Deleting commands")
+
+	for name, cmd := range commands.All {
+		if !cmd.Registered {
+			continue
+		}
+
+		err := session.ApplicationCommandDelete(session.State.User.ID, "", cmd.State.ID)
+
+		if err != nil {
+			log.Error().Str("message", fmt.Sprintf("Failed to delete '%v' command: ", name)).Err(err).Send()
+		}
+
+		cmd.Registered = false
 	}
 }
 
@@ -61,6 +83,16 @@ func Start(token *string) {
 
 func Stop() {
 	log.Info().Msg("Stopping the bot")
-	session.Close()
-	session = nil
+
+	if session != nil {
+		delCommands()
+
+		err := session.Close()
+
+		if err != nil {
+			log.Error().Str("message", "Failed to close the session properly").Err(err).Send()
+		}
+
+		session = nil
+	}
 }
