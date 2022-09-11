@@ -34,6 +34,8 @@ func init() {
 	// Note(Fredrico).
 	// If we are running in dev mode, we automatically set the RootPath to be the same as go.mod's directory
 	if *dev {
+		log.Warn().Msg("Dev mode is enabled, do not use this flag in production")
+
 		_, filename, _, _ := runtime.Caller(0)
 		globals.RootPath = path.Join(path.Dir(filename), "../..")
 	}
