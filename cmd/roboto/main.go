@@ -27,6 +27,10 @@ func init() {
 	// Parse arguments
 	flag.Parse()
 
+	if *token == "" {
+		log.Fatal().Msg("Token argument can not be empty")
+	}
+
 	// Note(Fredrico).
 	// If we are running in dev mode, we automatically set the RootPath to be the same as go.mod's directory
 	if *dev {
