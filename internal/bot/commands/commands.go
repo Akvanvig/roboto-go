@@ -19,9 +19,9 @@ type (
 		Data   *discordgo.InteractionCreate // Required
 	}
 
-	CommandInfo = discordgo.ApplicationCommand
+	CommandBase = discordgo.ApplicationCommand
 	Command     struct {
-		State        CommandInfo                                         // Required
+		State        CommandBase                                         // Required
 		Handler      func(cmd *Command, event *Event)                    // Optional
 		HandlerModal func(cmd *Command, event *Event, identifier string) // Optional
 		Check        func(cmd *Command, event *Event) error              // Optional
