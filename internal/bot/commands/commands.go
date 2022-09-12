@@ -10,6 +10,16 @@ import (
 	// Experimental official go package
 )
 
+const (
+	ResponsePong           = discordgo.InteractionResponsePong
+	ResponseMsg            = discordgo.InteractionResponseChannelMessageWithSource
+	ResponseMsgLater       = discordgo.InteractionResponseDeferredChannelMessageWithSource
+	ResponseMsgUpdate      = discordgo.InteractionResponseUpdateMessage
+	ResponseMsgUpdateLater = discordgo.InteractionResponseDeferredMessageUpdate
+	ResponseAutoComplete   = discordgo.InteractionApplicationCommandAutocompleteResult
+	ResponseModal          = discordgo.InteractionResponseModal
+)
+
 type (
 	Response     = discordgo.InteractionResponse
 	ResponseData = discordgo.InteractionResponseData
@@ -27,17 +37,6 @@ type (
 		Check        func(cmd *Command, event *Event) error              // Optional
 		Registered   bool                                                // Not set
 	}
-	CommandSlice = []*Command
-)
-
-const (
-	ResponsePong           = discordgo.InteractionResponsePong
-	ResponseMsg            = discordgo.InteractionResponseChannelMessageWithSource
-	ResponseMsgLater       = discordgo.InteractionResponseDeferredChannelMessageWithSource
-	ResponseMsgUpdate      = discordgo.InteractionResponseUpdateMessage
-	ResponseMsgUpdateLater = discordgo.InteractionResponseDeferredMessageUpdate
-	ResponseAutoComplete   = discordgo.InteractionApplicationCommandAutocompleteResult
-	ResponseModal          = discordgo.InteractionResponseModal
 )
 
 var allCommands = map[string]*Command{}
