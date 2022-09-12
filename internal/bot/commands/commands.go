@@ -32,7 +32,7 @@ type (
 	CommandBase = discordgo.ApplicationCommand
 	Command     struct {
 		State        CommandBase                                         // Required
-		Handler      func(cmd *Command, event *Event)                    // Optional
+		Handler      func(cmd *Command, event *Event)                    // Required
 		HandlerModal func(cmd *Command, event *Event, identifier string) // Optional
 		Check        func(cmd *Command, event *Event) error              // Optional
 		Registered   bool                                                // Not set
@@ -141,13 +141,14 @@ func Process(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if cmd.Check != nil {
 			err = cmd.Check(cmd, &event)
 
-			if err != nil {
-				event.RespondError(errors.New("Check failed, this incident will be reported"))
-				return
-			}
 		}
 
-		cmd.Handler(cmd, &event)
+		if err != nil {
+			event.RespondError(errors.New("Check failed, this incident will be reported"))
+		} else {
+			cmd.Handler(cmd, &event)
+		}
+
 		return
 	case discordgo.InteractionModalSubmit:
 		modalData := strings.SplitN(event.Data.ModalSubmitData().CustomID, "_", 2)
@@ -163,8 +164,6 @@ func Process(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			cmd.HandlerModal(cmd, &event, "")
 		}
 
-		return
-	default:
 		return
 	}
 
