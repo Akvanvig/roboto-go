@@ -165,6 +165,8 @@ func Process(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		}
 
 		return
+	default:
+		return
 	}
 
 	event.RespondError(errors.New("An internal error occured"))
