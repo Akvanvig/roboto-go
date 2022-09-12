@@ -54,7 +54,7 @@ func (event *Event) Respond(response *Response) error {
 func (event *Event) RespondError(err error) error {
 	errStr := err.Error()
 	errUUID := uuid.New().String()
-	log.Error().Str("message", errStr).Str("uuid", errUUID).Err(err).Send()
+	log.Error().Str("message", "Responded with error").Str("uuid", errUUID).Err(err).Send()
 
 	return event.Respond(&Response{
 		Type: ResponseMsg,
@@ -140,11 +140,10 @@ func Process(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 		if cmd.Check != nil {
 			err = cmd.Check(cmd, &event)
-
 		}
 
 		if err != nil {
-			event.RespondError(errors.New("Check failed, this incident will be reported"))
+			event.RespondError(err)
 		} else {
 			cmd.Handler(cmd, &event)
 		}
