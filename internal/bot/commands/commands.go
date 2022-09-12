@@ -2,7 +2,7 @@ package commands
 
 import (
 	"errors"
-	"fmt"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/uuid"
@@ -17,17 +17,17 @@ type (
 	ResponseData = discordgo.InteractionResponseData
 
 	Event struct {
-		Source *discordgo.Session
-		Data   *discordgo.InteractionCreate
+		Source *discordgo.Session           // Required
+		Data   *discordgo.InteractionCreate // Required
 	}
 
 	CommandInfo = discordgo.ApplicationCommand
 	Command     struct {
-		State        CommandInfo          // Required
-		Handler      func(e *Event)       // Required
-		HandlerModal func(e *Event)       // Optional
-		Check        func(e *Event) error // Optional
-		Registered   bool                 // Not set
+		State        CommandInfo                                         // Required
+		Handler      func(cmd *Command, event *Event)                    // Optional
+		HandlerModal func(cmd *Command, event *Event, identifier string) // Optional
+		Check        func(cmd *Command, event *Event) error              // Optional
+		Registered   bool                                                // Not set
 	}
 	CommandMap = map[string]*Command
 )
@@ -42,7 +42,7 @@ const (
 	ResponseModal          = discordgo.InteractionResponseModal
 )
 
-var AllCommands = CommandMap{}
+var allCommands = CommandMap{}
 
 func (event *Event) Respond(response *Response) error {
 	err := event.Source.InteractionRespond(event.Data.Interaction, response)
@@ -62,13 +62,21 @@ func (event *Event) RespondError(err error) error {
 	return event.Respond(&Response{
 		Type: ResponseMsg,
 		Data: &ResponseData{
-			Content: fmt.Sprintf("%s ID: %s", errStr, errUUID),
+			Content: errStr + " ID: " + errUUID,
 		},
 	})
 }
 
+func (command *Command) GenerateModalID(userData string) string {
+	if userData != "" {
+		return command.State.Name + "_" + userData
+	}
+
+	return command.State.Name
+}
+
 func addCommands(commands CommandMap) {
-	maps.Copy(AllCommands, commands)
+	maps.Copy(allCommands, commands)
 }
 
 // TODO(Fredrico):
@@ -85,11 +93,11 @@ func addCommandsAdvanced(commands CommandMap, permissions int64) {
 func Create(s *discordgo.Session) {
 	log.Info().Msg("Creating commands")
 
-	for cmdName, cmd := range AllCommands {
+	for cmdName, cmd := range allCommands {
 		updatedState, err := s.ApplicationCommandCreate(s.State.User.ID, "", &cmd.State)
 
 		if err != nil {
-			log.Error().Str("message", fmt.Sprintf("Could not create '%v' command: ", cmdName)).Err(err).Send()
+			log.Error().Str("message", "Could not create '"+cmdName+"' command").Err(err).Send()
 		}
 
 		// Update command state
@@ -101,7 +109,7 @@ func Create(s *discordgo.Session) {
 func Delete(s *discordgo.Session) {
 	log.Info().Msg("Deleting commands")
 
-	for cmdName, cmd := range AllCommands {
+	for cmdName, cmd := range allCommands {
 		if !cmd.Registered {
 			continue
 		}
@@ -109,7 +117,7 @@ func Delete(s *discordgo.Session) {
 		err := s.ApplicationCommandDelete(s.State.User.ID, "", cmd.State.ID)
 
 		if err != nil {
-			log.Error().Str("message", fmt.Sprintf("Failed to delete '%v' command: ", cmdName)).Err(err).Send()
+			log.Error().Str("message", "Failed to delete '"+cmdName+"' command: ").Err(err).Send()
 		}
 
 		cmd.Registered = false
@@ -117,42 +125,47 @@ func Delete(s *discordgo.Session) {
 }
 
 func Process(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	var err error
 	event := Event{
 		Source: s,
 		Data:   i,
 	}
-	var (
-		cmdName string
-		err     error
-	)
 
 	switch event.Data.Interaction.Type {
 	case discordgo.InteractionApplicationCommand:
-		cmdName = event.Data.ApplicationCommandData().Name
-	case discordgo.InteractionModalSubmit:
-		// TODO(Fredrico)
-		cmdName = "None"
-	}
+		cmd, ok := allCommands[event.Data.ApplicationCommandData().Name]
 
-	cmd, ok := AllCommands[cmdName]
+		if !ok {
+			break
+		}
 
-	if !ok {
-		event.RespondError(errors.New("An internal error occured"))
-		return
-	}
-
-	switch event.Data.Interaction.Type {
-	case discordgo.InteractionApplicationCommand:
 		if cmd.Check != nil {
-			err = cmd.Check(&event)
+			err = cmd.Check(cmd, &event)
 
 			if err != nil {
 				event.RespondError(errors.New("Check failed, this incident will be reported"))
-				return
+				break
 			}
 		}
 
-		cmd.Handler(&event)
+		cmd.Handler(cmd, &event)
+		return
 	case discordgo.InteractionModalSubmit:
+		modalData := strings.SplitN(event.Data.ModalSubmitData().CustomID, "_", 2)
+		cmd, ok := allCommands[modalData[0]]
+
+		if !ok {
+			break
+		}
+
+		if len(modalData) > 1 {
+			cmd.HandlerModal(cmd, &event, modalData[1])
+		} else {
+			cmd.HandlerModal(cmd, &event, "")
+		}
+
+		return
 	}
+
+	event.RespondError(errors.New("An internal error occured"))
 }

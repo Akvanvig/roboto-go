@@ -9,7 +9,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func onCatJam(event *Event) {
+func onCatJam(cmd *Command, event *Event) {
 	file, err := os.Open(path.Join(RootPath, "assets/img/catjam.gif"))
 
 	if err != nil {
@@ -35,20 +35,22 @@ func onCatJam(event *Event) {
 
 // TODO(Fredrico):
 // This is unfinished
-func onLetsPlay(event *Event) {
+func onLetsPlay(cmd *Command, event *Event) {
 	event.Respond(&Response{
 		Type: ResponseModal,
 		Data: &ResponseData{
-			CustomID: "modals_survey_" + event.Data.Interaction.Member.User.ID,
-			Title:    "Modals survey",
+			// Note(Fredrico):
+			// The parameter to GenerateModalID is optional
+			CustomID: cmd.GenerateModalID(event.Data.Interaction.Member.User.ID),
+			Title:    "A Game",
 			Components: []discordgo.MessageComponent{
 				discordgo.ActionsRow{
 					Components: []discordgo.MessageComponent{
 						discordgo.TextInput{
 							CustomID:    "opinion",
-							Label:       "What is your opinion on them?",
+							Label:       "Why do you want to play the game?",
 							Style:       discordgo.TextInputShort,
-							Placeholder: "Don't be shy, share your opinion with us",
+							Placeholder: "Don't be shy, tell me",
 							Required:    true,
 							MaxLength:   300,
 							MinLength:   10,
@@ -56,6 +58,15 @@ func onLetsPlay(event *Event) {
 					},
 				},
 			},
+		},
+	})
+}
+
+func onLetsPlaySubmit(cmd *Command, event *Event, identifier string) {
+	event.Respond(&Response{
+		Type: ResponseMsg,
+		Data: &ResponseData{
+			Content: "Thank you for playing! Here's your doxed user ID: " + identifier,
 		},
 	})
 }
@@ -74,7 +85,8 @@ func init() {
 				Name:        "letsplay",
 				Description: "Let's play a game",
 			},
-			Handler: onLetsPlay,
+			Handler:      onLetsPlay,
+			HandlerModal: onLetsPlaySubmit,
 		},
 	}
 
