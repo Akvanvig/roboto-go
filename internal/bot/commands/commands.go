@@ -7,9 +7,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
-
 	// Experimental official go package
-	"golang.org/x/exp/maps"
 )
 
 type (
@@ -29,7 +27,7 @@ type (
 		Check        func(cmd *Command, event *Event) error              // Optional
 		Registered   bool                                                // Not set
 	}
-	CommandMap = map[string]*Command
+	CommandSlice = []*Command
 )
 
 const (
@@ -42,7 +40,7 @@ const (
 	ResponseModal          = discordgo.InteractionResponseModal
 )
 
-var allCommands = CommandMap{}
+var allCommands = map[string]*Command{}
 
 func (event *Event) Respond(response *Response) error {
 	err := event.Source.InteractionRespond(event.Data.Interaction, response)
@@ -75,19 +73,21 @@ func (command *Command) GenerateModalID(userData string) string {
 	return command.State.Name
 }
 
-func addCommands(commands CommandMap) {
-	maps.Copy(allCommands, commands)
+func addCommands(commands []*Command) {
+	for _, cmd := range commands {
+		allCommands[cmd.State.Name] = cmd
+	}
 }
 
 // TODO(Fredrico):
 // This needs to be improved with check addition
-func addCommandsAdvanced(commands CommandMap, permissions int64) {
-	for _, val := range commands {
+func addCommandsAdvanced(commands []*Command, permissions int64) {
+	for _, cmd := range commands {
 		// See https://github.com/bwmarrin/discordgo/blob/v0.26.1/structs.go#L1988 for permissions
-		val.State.DefaultMemberPermissions = &permissions
-	}
+		cmd.State.DefaultMemberPermissions = &permissions
 
-	addCommands(commands)
+		allCommands[cmd.State.Name] = cmd
+	}
 }
 
 func Create(s *discordgo.Session) {

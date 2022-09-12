@@ -72,15 +72,15 @@ func onLetsPlaySubmit(cmd *Command, event *Event, identifier string) {
 }
 
 func init() {
-	generalCommands := CommandMap{
-		"catjam": &Command{
+	generalCommands := []*Command{
+		{
 			State: CommandInfo{
 				Name:        "catjam",
 				Description: "Let's jam!",
 			},
 			Handler: onCatJam,
 		},
-		"letsplay": &Command{
+		{
 			State: CommandInfo{
 				Name:        "letsplay",
 				Description: "Let's play a game",
