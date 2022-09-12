@@ -14,68 +14,12 @@ func onReady(s *discordgo.Session, r *discordgo.Ready) {
 	log.Info().Msg(fmt.Sprintf("Connected as: %v#%v", s.State.User.Username, s.State.User.Discriminator))
 }
 
+func onMsg(s *discordgo.Session, m *discordgo.MessageCreate) {
+	// Nothing yet
+}
+
 func onInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	if cmd, ok := commands.All[i.ApplicationCommandData().Name]; ok {
-		var err error
-
-		if cmd.Check != nil {
-			err = cmd.Check(s, i)
-
-			if err != nil {
-				commands.SendErrorCheckFailed(s, i, err)
-				return
-			}
-		}
-
-		var res *commands.Response
-
-		res, err = cmd.Handler(i)
-
-		if err != nil {
-			commands.SendErrorInternal(s, i, err)
-		} else {
-			commands.SendResponse(s, i, res)
-		}
-	}
-}
-
-func initHandlers() {
-	session.AddHandler(onInteraction)
-	session.AddHandler(onReady)
-}
-
-func initCommands() {
-	log.Info().Msg("Initializing commands")
-
-	for name, cmd := range commands.All {
-		updatedState, err := session.ApplicationCommandCreate(session.State.User.ID, "", &cmd.State)
-
-		if err != nil {
-			log.Error().Str("message", fmt.Sprintf("Could not create '%v' command: ", name)).Err(err).Send()
-		}
-
-		// Update command state
-		cmd.State = *updatedState
-		cmd.Registered = true
-	}
-}
-
-func delCommands() {
-	log.Info().Msg("Deleting commands")
-
-	for name, cmd := range commands.All {
-		if !cmd.Registered {
-			continue
-		}
-
-		err := session.ApplicationCommandDelete(session.State.User.ID, "", cmd.State.ID)
-
-		if err != nil {
-			log.Error().Str("message", fmt.Sprintf("Failed to delete '%v' command: ", name)).Err(err).Send()
-		}
-
-		cmd.Registered = false
-	}
+	commands.Process(s, i)
 }
 
 func Start(token *string) {
@@ -89,7 +33,9 @@ func Start(token *string) {
 		log.Fatal().Str("message", "Invalid bot parameters: ").Err(err).Send()
 	}
 
-	initHandlers()
+	session.AddHandler(onReady)
+	session.AddHandler(onMsg)
+	session.AddHandler(onInteraction)
 
 	err = session.Open()
 
@@ -97,14 +43,14 @@ func Start(token *string) {
 		log.Fatal().Str("message", "Cannot open a session: ").Err(err).Send()
 	}
 
-	initCommands()
+	commands.Create(session)
 }
 
 func Stop() {
 	log.Info().Msg("Stopping the bot")
 
 	if session != nil {
-		delCommands()
+		commands.Delete(session)
 
 		err := session.Close()
 

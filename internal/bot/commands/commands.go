@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/bwmarrin/discordgo"
@@ -12,18 +13,21 @@ import (
 )
 
 type (
-	Session           = discordgo.Session
-	InteractionCreate = discordgo.InteractionCreate
-
 	Response     = discordgo.InteractionResponse
 	ResponseData = discordgo.InteractionResponseData
 
+	Event struct {
+		Source *discordgo.Session
+		Data   *discordgo.InteractionCreate
+	}
+
 	CommandInfo = discordgo.ApplicationCommand
 	Command     struct {
-		State      CommandInfo                                   // Required
-		Handler    func(i *InteractionCreate) (*Response, error) // Required
-		Check      func(s *Session, i *InteractionCreate) error  // Optional
-		Registered bool                                          // Not set
+		State        CommandInfo          // Required
+		Handler      func(e *Event)       // Required
+		HandlerModal func(e *Event)       // Optional
+		Check        func(e *Event) error // Optional
+		Registered   bool                 // Not set
 	}
 	CommandMap = map[string]*Command
 )
@@ -38,48 +42,117 @@ const (
 	ResponseModal          = discordgo.InteractionResponseModal
 )
 
-var All = CommandMap{}
+var AllCommands = CommandMap{}
 
-func addCommands(commands CommandMap) {
-	maps.Copy(All, commands)
+func (event *Event) Respond(response *Response) error {
+	err := event.Source.InteractionRespond(event.Data.Interaction, response)
+
+	if err != nil {
+		log.Error().Str("message", "Failed to send a response to discord").Err(err).Send()
+	}
+
+	return err
 }
 
-// Note(Fredrico):
-// See https://github.com/bwmarrin/discordgo/blob/v0.26.1/structs.go#L1988 for permissions
+func (event *Event) RespondError(err error) error {
+	errStr := err.Error()
+	errUUID := uuid.New().String()
+	log.Error().Str("message", errStr).Str("uuid", errUUID).Err(err).Send()
+
+	return event.Respond(&Response{
+		Type: ResponseMsg,
+		Data: &ResponseData{
+			Content: fmt.Sprintf("%s ID: %s", errStr, errUUID),
+		},
+	})
+}
+
+func addCommands(commands CommandMap) {
+	maps.Copy(AllCommands, commands)
+}
+
 // TODO(Fredrico):
 // This needs to be improved with check addition
 func addCommandsAdvanced(commands CommandMap, permissions int64) {
 	for _, val := range commands {
+		// See https://github.com/bwmarrin/discordgo/blob/v0.26.1/structs.go#L1988 for permissions
 		val.State.DefaultMemberPermissions = &permissions
 	}
 
 	addCommands(commands)
 }
 
-func SendResponse(s *discordgo.Session, i *discordgo.InteractionCreate, response *Response) {
-	s.InteractionRespond(i.Interaction, response)
+func Create(s *discordgo.Session) {
+	log.Info().Msg("Creating commands")
+
+	for cmdName, cmd := range AllCommands {
+		updatedState, err := s.ApplicationCommandCreate(s.State.User.ID, "", &cmd.State)
+
+		if err != nil {
+			log.Error().Str("message", fmt.Sprintf("Could not create '%v' command: ", cmdName)).Err(err).Send()
+		}
+
+		// Update command state
+		cmd.State = *updatedState
+		cmd.Registered = true
+	}
 }
 
-func SendErrorCheckFailed(s *discordgo.Session, i *discordgo.InteractionCreate, err error) {
-	errUUID := uuid.New().String()
-	log.Warn().Str("message", err.Error()).Str("uuid", errUUID).Err(err).Send()
+func Delete(s *discordgo.Session) {
+	log.Info().Msg("Deleting commands")
 
-	SendResponse(s, i, &Response{
-		Type: ResponseMsg,
-		Data: &ResponseData{
-			Content: "Check failed, this incident will be reported",
-		},
-	})
+	for cmdName, cmd := range AllCommands {
+		if !cmd.Registered {
+			continue
+		}
+
+		err := s.ApplicationCommandDelete(s.State.User.ID, "", cmd.State.ID)
+
+		if err != nil {
+			log.Error().Str("message", fmt.Sprintf("Failed to delete '%v' command: ", cmdName)).Err(err).Send()
+		}
+
+		cmd.Registered = false
+	}
 }
 
-func SendErrorInternal(s *discordgo.Session, i *discordgo.InteractionCreate, err error) {
-	errUUID := uuid.New().String()
-	log.Error().Str("message", err.Error()).Str("uuid", errUUID).Err(err).Send()
+func Process(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	event := Event{
+		Source: s,
+		Data:   i,
+	}
+	var (
+		cmdName string
+		err     error
+	)
 
-	SendResponse(s, i, &Response{
-		Type: ResponseMsg,
-		Data: &ResponseData{
-			Content: fmt.Sprintf("An internal error occured, please provide the following UUID to the bot owner: %s", errUUID),
-		},
-	})
+	switch event.Data.Interaction.Type {
+	case discordgo.InteractionApplicationCommand:
+		cmdName = event.Data.ApplicationCommandData().Name
+	case discordgo.InteractionModalSubmit:
+		// TODO(Fredrico)
+		cmdName = "None"
+	}
+
+	cmd, ok := AllCommands[cmdName]
+
+	if !ok {
+		event.RespondError(errors.New("An internal error occured"))
+		return
+	}
+
+	switch event.Data.Interaction.Type {
+	case discordgo.InteractionApplicationCommand:
+		if cmd.Check != nil {
+			err = cmd.Check(&event)
+
+			if err != nil {
+				event.RespondError(errors.New("Check failed, this incident will be reported"))
+				return
+			}
+		}
+
+		cmd.Handler(&event)
+	case discordgo.InteractionModalSubmit:
+	}
 }

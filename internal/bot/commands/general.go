@@ -9,16 +9,17 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func onCatJam(i *InteractionCreate) (*Response, error) {
+func onCatJam(event *Event) {
 	file, err := os.Open(path.Join(RootPath, "assets/img/catjam.gif"))
 
 	if err != nil {
-		return nil, errors.New("Failed to open catjam asset")
+		event.RespondError(errors.New("Failed to open catjam asset"))
+		return
 	}
 
 	defer file.Close()
 
-	return &Response{
+	event.Respond(&Response{
 		Type: ResponseMsg,
 		Data: &ResponseData{
 			Files: []*discordgo.File{
@@ -29,7 +30,34 @@ func onCatJam(i *InteractionCreate) (*Response, error) {
 				},
 			},
 		},
-	}, nil
+	})
+}
+
+// TODO(Fredrico):
+// This is unfinished
+func onLetsPlay(event *Event) {
+	event.Respond(&Response{
+		Type: ResponseModal,
+		Data: &ResponseData{
+			CustomID: "modals_survey_" + event.Data.Interaction.Member.User.ID,
+			Title:    "Modals survey",
+			Components: []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.TextInput{
+							CustomID:    "opinion",
+							Label:       "What is your opinion on them?",
+							Style:       discordgo.TextInputShort,
+							Placeholder: "Don't be shy, share your opinion with us",
+							Required:    true,
+							MaxLength:   300,
+							MinLength:   10,
+						},
+					},
+				},
+			},
+		},
+	})
 }
 
 func init() {
@@ -40,6 +68,13 @@ func init() {
 				Description: "Let's jam!",
 			},
 			Handler: onCatJam,
+		},
+		"letsplay": &Command{
+			State: CommandInfo{
+				Name:        "letsplay",
+				Description: "Let's play a game",
+			},
+			Handler: onLetsPlay,
 		},
 	}
 
