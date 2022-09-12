@@ -144,7 +144,7 @@ func Process(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 			if err != nil {
 				event.RespondError(errors.New("Check failed, this incident will be reported"))
-				break
+				return
 			}
 		}
 
