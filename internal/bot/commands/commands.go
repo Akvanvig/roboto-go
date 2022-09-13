@@ -31,11 +31,11 @@ type (
 
 	CommandBase = discordgo.ApplicationCommand
 	Command     struct {
-		State        CommandBase                                         // Required
-		Handler      func(cmd *Command, event *Event)                    // Required
-		HandlerModal func(cmd *Command, event *Event, identifier string) // Optional
-		Check        func(cmd *Command, event *Event) error              // Optional
-		Registered   bool                                                // Not set
+		State              CommandBase                                         // Required
+		Handler            func(cmd *Command, event *Event)                    // Required
+		HandlerModalSubmit func(cmd *Command, event *Event, identifier string) // Optional
+		Check              func(cmd *Command, event *Event) error              // Optional
+		Registered         bool                                                // Not set
 	}
 )
 
@@ -158,9 +158,9 @@ func Process(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		}
 
 		if len(modalData) > 1 {
-			cmd.HandlerModal(cmd, &event, modalData[1])
+			cmd.HandlerModalSubmit(cmd, &event, modalData[1])
 		} else {
-			cmd.HandlerModal(cmd, &event, "")
+			cmd.HandlerModalSubmit(cmd, &event, "")
 		}
 
 		return

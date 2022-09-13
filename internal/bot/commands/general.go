@@ -85,8 +85,8 @@ func init() {
 				Name:        "letsplay",
 				Description: "Let's play a game",
 			},
-			Handler:      onLetsPlay,
-			HandlerModal: onLetsPlaySubmit,
+			Handler:            onLetsPlay,
+			HandlerModalSubmit: onLetsPlaySubmit,
 		},
 	}
 
