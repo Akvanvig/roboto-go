@@ -63,12 +63,7 @@ func onLetsPlay(cmd *Command, event *Event) {
 }
 
 func onLetsPlaySubmit(cmd *Command, event *Event, identifier string) {
-	event.Respond(&Response{
-		Type: ResponseMsg,
-		Data: &ResponseData{
-			Content: "Thank you for playing! Here's your doxed user ID: " + identifier,
-		},
-	})
+	event.RespondMsg("Thank you for playing! Here's your doxed user ID: " + identifier)
 }
 
 func init() {

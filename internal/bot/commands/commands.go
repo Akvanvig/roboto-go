@@ -21,12 +21,13 @@ const (
 )
 
 type (
-	Response     = discordgo.InteractionResponse
-	ResponseData = discordgo.InteractionResponseData
+	Response      = discordgo.InteractionResponse
+	ResponseData  = discordgo.InteractionResponseData
+	CommandOption = discordgo.ApplicationCommandOption
 
 	Event struct {
-		Source *discordgo.Session           // Required
-		Data   *discordgo.InteractionCreate // Required
+		Session *discordgo.Session           // Required
+		Data    *discordgo.InteractionCreate // Required
 	}
 
 	CommandBase = discordgo.ApplicationCommand
@@ -42,7 +43,7 @@ type (
 var allCommands = map[string]*Command{}
 
 func (event *Event) Respond(response *Response) error {
-	err := event.Source.InteractionRespond(event.Data.Interaction, response)
+	err := event.Session.InteractionRespond(event.Data.Interaction, response)
 
 	if err != nil {
 		log.Error().Str("message", "Failed to send a response to discord").Err(err).Send()
@@ -51,15 +52,32 @@ func (event *Event) Respond(response *Response) error {
 	return err
 }
 
+func (event *Event) RespondMsg(msg string) error {
+	return event.Respond(&Response{
+		Type: ResponseMsg,
+		Data: &ResponseData{
+			Content: msg,
+		},
+	})
+}
+
 func (event *Event) RespondError(err error) error {
-	errStr := err.Error()
-	errUUID := uuid.New().String()
-	log.Error().Str("message", "Responded with error").Str("uuid", errUUID).Err(err).Send()
+	var fullUserName string
+	uuid := uuid.New().String()
+
+	if event.Data.Member != nil {
+		fullUserName = event.Data.Interaction.Member.User.Username + "#" + event.Data.Member.User.Discriminator
+
+	} else {
+		fullUserName = event.Data.Interaction.User.Username + "#" + event.Data.Interaction.User.Discriminator
+	}
+
+	log.Error().Str("message", "Responded with an error to a user interaction").Str("username", fullUserName).Str("uuid", uuid).Err(err).Send()
 
 	return event.Respond(&Response{
 		Type: ResponseMsg,
 		Data: &ResponseData{
-			Content: errStr + " ID: " + errUUID,
+			Content: err.Error() + ", Error ID: " + uuid,
 		},
 	})
 }
@@ -78,12 +96,11 @@ func addCommands(commands []*Command) {
 	}
 }
 
-// TODO(Fredrico):
-// This needs to be improved with check addition
-func addCommandsAdvanced(commands []*Command, permissions int64) {
+func addCommandsAdvanced(commands []*Command, permissions int64, check func(cmd *Command, event *Event) error) {
 	for _, cmd := range commands {
 		// See https://github.com/bwmarrin/discordgo/blob/v0.26.1/structs.go#L1988 for permissions
 		cmd.State.DefaultMemberPermissions = &permissions
+		cmd.Check = check
 
 		allCommands[cmd.State.Name] = cmd
 	}
@@ -126,8 +143,8 @@ func Delete(s *discordgo.Session) {
 func Process(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	var err error
 	event := Event{
-		Source: s,
-		Data:   i,
+		Session: s,
+		Data:    i,
 	}
 
 	switch event.Data.Interaction.Type {
