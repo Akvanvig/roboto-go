@@ -18,12 +18,11 @@ func isGuildCmd(cmd *Command, event *Event) error {
 // Note(Fredrico):
 // All of this is going to be a hell to synchronize.
 // Remember: We need to make this async
-
 func onPlay(cmd *Command, event *Event) {
 	guildID := event.Data.Interaction.GuildID
-	player, ok := music.GuildPlayers[guildID]
+	player := music.GetGuildPlayer(guildID, false)
 
-	if !ok {
+	if player == nil {
 		vs, _ := event.Session.State.VoiceState(guildID, event.Data.Interaction.Member.User.ID)
 
 		if vs == nil {
@@ -31,21 +30,13 @@ func onPlay(cmd *Command, event *Event) {
 			return
 		}
 
-		channelID := vs.ChannelID
-
-		player = &music.GuildPlayer{
-			GuildID:   guildID,
-			ChannelID: channelID,
-		}
-
-		music.GuildPlayers[event.Data.GuildID] = player
-
-		event.Session.ChannelVoiceJoin(guildID, channelID, false, false)
-	} else {
-		// Not implemented
+		player = music.GetGuildPlayer(guildID, true)
+		player.Connect(event.Session, vs.ChannelID)
 	}
 
-	event.RespondMsg("Congratulations! You played a song")
+	player.Play("")
+
+	event.RespondMsg("Congratulations! You played a video")
 }
 
 func onConnect(cmd *Command, event *Event) {
@@ -72,44 +63,27 @@ func onConnect(cmd *Command, event *Event) {
 		return
 	}
 
-	player, ok := music.GuildPlayers[guildID]
+	player := music.GetGuildPlayer(guildID, true)
 
-	// Note(Fredrico):
-	// This can probably be improved to look nicer
-	if !ok {
-		player = &music.GuildPlayer{
-			GuildID:   guildID,
-			ChannelID: channelID,
-		}
-		music.GuildPlayers[guildID] = player
-
-		player.Connect(event.Session)
-
+	switch err := player.Connect(event.Session, channelID); err {
+	case nil:
 		event.RespondMsg("Connected to: " + voiceChannel.Name)
-	} else if player.ChannelID != channelID {
-		player.Disconnect()
-		player.ChannelID = channelID
-
-		player.Connect(event.Session)
-
-		event.RespondMsg("Connected to: " + voiceChannel.Name)
-	} else {
+	case err.(music.ConnectionError):
 		event.RespondMsg("The bot is already connected to the given voice channel")
+	default:
+		event.RespondError(err)
 	}
 }
 
 func onDisconnect(cmd *Command, event *Event) {
 	guildID := event.Data.Interaction.GuildID
-	player, ok := music.GuildPlayers[guildID]
+	err := music.DeleteGuildPlayer(guildID)
 
-	if !ok {
+	if err != nil {
 		event.RespondMsg("The bot is not connected to a voice channel")
-		return
+	} else {
+		event.RespondMsg("The bot was disconnected from the voice channel")
 	}
-
-	player.Disconnect()
-	delete(music.GuildPlayers, guildID)
-	event.RespondMsg("The bot was disconnected from the voice channel")
 }
 
 func init() {
