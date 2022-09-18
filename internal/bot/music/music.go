@@ -7,8 +7,8 @@ import (
 	"io/fs"
 	"sync"
 
+	"github.com/Akvanvig/roboto-go/internal/bot/music/ffmpeg"
 	"github.com/Akvanvig/roboto-go/internal/bot/music/youtubedl"
-	"github.com/Akvanvig/roboto-go/internal/util"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gammazero/deque"
 	"github.com/rs/zerolog/log"
@@ -112,7 +112,7 @@ func (player *GuildPlayer) Disconnect() error {
 
 func (player *GuildPlayer) AddToQueue(videoInfo *youtubedl.BasicVideoInfo) error {
 	ctx, _ := context.WithCancel(context.Background())
-	audioReader, err := util.CreateFFmpegStream(ctx, videoInfo.StreamingUrl)
+	audioReader, err := ffmpeg.CreateStream(ctx, videoInfo.StreamingUrl)
 
 	if err != nil {
 		log.Fatal().Err(err).Msg("Fuck 2")
