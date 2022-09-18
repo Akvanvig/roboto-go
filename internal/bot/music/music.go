@@ -64,7 +64,7 @@ func (player *GuildPlayer) Connect(session *discordgo.Session, channelID string)
 		return err
 	}
 
-	_, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
 
 	/*
 		func() {
@@ -89,6 +89,7 @@ func (player *GuildPlayer) Connect(session *discordgo.Session, channelID string)
 
 	// Temporary
 	player.VoiceConnection = vc
+	player.Ctx = ctx
 	player.Leave = cancel
 
 	return nil
