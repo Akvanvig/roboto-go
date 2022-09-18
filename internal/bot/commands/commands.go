@@ -53,14 +53,40 @@ func (event *Event) Respond(response *Response) error {
 	return err
 }
 
-func (event *Event) ResponseUpdate(responseDataUpdate *ResponseDataUpdate) error {
+func (event *Event) RespondLater() error {
+	return event.Respond(&Response{
+		Type: ResponseMsgLater,
+	})
+}
+
+func (event *Event) RespondUpdate(responseDataUpdate *ResponseDataUpdate) error {
 	_, err := event.Session.InteractionResponseEdit(event.Data.Interaction, responseDataUpdate)
 	return err
 }
 
-func (event *Event) RespondLater() error {
-	return event.Respond(&Response{
-		Type: ResponseMsgLater,
+func (event *Event) RespondUpdateMsg(msg string) error {
+	return event.RespondUpdate(&ResponseDataUpdate{
+		Content: &msg,
+	})
+}
+
+func (event *Event) RespondUpdateError(err error) error {
+	var fullUserName string
+	uuid := uuid.New().String()
+
+	if event.Data.Member != nil {
+		fullUserName = event.Data.Interaction.Member.User.Username + "#" + event.Data.Member.User.Discriminator
+
+	} else {
+		fullUserName = event.Data.Interaction.User.Username + "#" + event.Data.Interaction.User.Discriminator
+	}
+
+	log.Error().Str("message", "Updated a response with an error to a user interaction").Str("username", fullUserName).Str("uuid", uuid).Err(err).Send()
+
+	errMsg := err.Error() + ", Error ID: " + uuid
+
+	return event.RespondUpdate(&ResponseDataUpdate{
+		Content: &errMsg,
 	})
 }
 

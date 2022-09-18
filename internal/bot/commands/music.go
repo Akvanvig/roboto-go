@@ -39,25 +39,21 @@ func onPlay(cmd *Command, event *Event) {
 	}
 
 	videoInfo, err := youtubedl.GetVideoInfo(event.Data.Interaction.ApplicationCommandData().Options[0].StringValue())
-	var updateMsg string
 
+	// Note(Fredrico):
+	// This is not the only error GetVideoInfo returns
 	if err != nil {
-		updateMsg = "The provided url was invalid. Video names are not yet supported"
-	} else {
-		err = player.AddToQueue(videoInfo)
-
-		if err != nil {
-			updateMsg = "An error occured in playing the video"
-		} else {
-			updateMsg = "Congratulations! You added a video to the queue"
-		}
+		event.RespondUpdateMsg("The provided url was invalid. Video names are not yet supported")
+		return
 	}
 
-	event.ResponseUpdate(
-		&ResponseDataUpdate{
-			Content: &updateMsg,
-		},
-	)
+	err = player.AddToQueue(videoInfo)
+
+	if err != nil {
+		event.RespondUpdateMsg("An error occured in playing the video")
+	} else {
+		event.RespondUpdateMsg("Congratulations! You added a video to the queue")
+	}
 }
 
 func onConnect(cmd *Command, event *Event) {
@@ -87,22 +83,14 @@ func onConnect(cmd *Command, event *Event) {
 	event.RespondLater()
 
 	player := music.GetGuildPlayer(guildID, true)
-	var updateMsg string
-
 	switch err := player.Connect(event.Session, channelID); err {
 	case nil:
-		updateMsg = "Connected to: " + voiceChannel.Name
+		event.RespondUpdateMsg("Connected to: " + voiceChannel.Name)
 	case err.(music.ConnectionError):
-		updateMsg = "The bot is already connected to the given voice channel"
+		event.RespondUpdateMsg("The bot is already connected to the given voice channel")
 	default:
-		//event.RespondError(err)
+		event.RespondUpdateError(err)
 	}
-
-	event.ResponseUpdate(
-		&ResponseDataUpdate{
-			Content: &updateMsg,
-		},
-	)
 }
 
 func onDisconnect(cmd *Command, event *Event) {
