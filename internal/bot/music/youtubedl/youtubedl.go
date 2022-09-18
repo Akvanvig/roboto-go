@@ -201,12 +201,13 @@ func fetchYoutubeVideoStreamingUrl(rawUrl string) (string, error) {
 	cmd := exec.Command(
 		youtubedlPath(),
 		"--get-url",
+		"--ignore-errors",
+		"--no-cache-dir",
 		"--restrict-filenames",
 		// START: SUBJECT TO CHANGE
 		"--no-playlist",
 		// END: SUBJECT TO CHANGE
 		"--no-check-certificate",
-		"--ignore-errors",
 		"--quiet",
 		"--no-warnings",
 		"-f",
@@ -233,7 +234,6 @@ func fetchYoutubeVideoInfo(rawUrl string) (*Info, error) {
 	cmd := exec.Command(
 		youtubedlPath(),
 		"--ignore-errors",
-		"--no-call-home",
 		"--no-cache-dir",
 		"--skip-download",
 		"--restrict-filenames",

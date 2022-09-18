@@ -1,10 +1,11 @@
 package music
 
 import (
+	"bufio"
 	"context"
 	"encoding/binary"
 	"errors"
-	"io/fs"
+	"io"
 	"sync"
 
 	"github.com/Akvanvig/roboto-go/internal/bot/music/ffmpeg"
@@ -111,39 +112,39 @@ func (player *GuildPlayer) Disconnect() error {
 }
 
 func (player *GuildPlayer) AddToQueue(videoInfo *youtubedl.BasicVideoInfo) error {
-	ctx, _ := context.WithCancel(context.Background())
-	audioReader, err := ffmpeg.CreateStream(ctx, videoInfo.StreamingUrl)
+	reader, err := ffmpeg.New(player.Ctx, videoInfo.StreamingUrl)
 
 	if err != nil {
 		log.Fatal().Err(err).Msg("Fuck 2")
-		return errors.New("Tmp2")
+		return err
 	}
 
 	go func() {
 		var buffer [OpusSamplesPerFrame * OpusChannels]int16
 
+		bufferedReader := bufio.NewReaderSize(reader, 16384)
 		encoder, _ := gopus.NewEncoder(OpusSamplingRate, OpusChannels, gopus.Audio)
 
 		player.VoiceConnection.Speaking(true)
 		defer player.VoiceConnection.Speaking(false)
+		defer reader.Close()
 
 		for {
-			err := binary.Read(audioReader, binary.LittleEndian, &buffer)
-
-			// Note(Fredrico):
-			// A closed pipe means ffmpeg has finished playing
-			if _, ok := err.(*fs.PathError); ok {
-				break
-			}
+			err := binary.Read(bufferedReader, binary.LittleEndian, &buffer)
 
 			if err != nil {
-				log.Fatal().Err(err).Msg("BORK!")
+				if err != io.EOF && err != io.ErrUnexpectedEOF {
+					log.Error().Str("message", "Unexpected ffmpeg error occured").Err(err).Send()
+				}
+
+				break
 			}
 
 			encodedBuffer, err := encoder.Encode(buffer[:], OpusSamplesPerFrame, OpusFrameSize)
 
 			if err != nil {
-				log.Fatal().Err(err).Msg("BORK 2!")
+				log.Error().Str("message", "Unexpected encoding error occured").Err(err).Send()
+				break
 			}
 
 			player.VoiceConnection.OpusSend <- encodedBuffer
