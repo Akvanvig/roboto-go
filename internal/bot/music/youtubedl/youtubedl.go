@@ -5,12 +5,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"net/url"
 	"os/exec"
 	"path"
 	"strings"
 
 	"github.com/Akvanvig/roboto-go/internal/globals"
+	"github.com/Akvanvig/roboto-go/internal/util"
 	"github.com/rs/zerolog/log"
 )
 
@@ -173,7 +173,7 @@ type BasicVideoInfo struct {
 }
 
 func (videoInfo *BasicVideoInfo) Update() {
-
+	videoInfo.StreamingUrl, _ = fetchYoutubeVideoStreamingUrl(videoInfo.Url)
 }
 
 func youtubedlPath() string {
@@ -191,23 +191,43 @@ func youtubedlPath() string {
 	return ytdlPath
 }
 
-func fetchYoutubeVideoLink(rawUrl string) (string, error) {
-	return "", nil
+func fetchYoutubeVideoStreamingUrl(rawUrl string) (string, error) {
+	url, err := util.ValidateUrl(rawUrl)
+
+	if err != nil {
+		return "", err
+	}
+
+	cmd := exec.Command(
+		youtubedlPath(),
+		"--get-url",
+		"--restrict-filenames",
+		// START: SUBJECT TO CHANGE
+		"--no-playlist",
+		// END: SUBJECT TO CHANGE
+		"--no-check-certificate",
+		"--ignore-errors",
+		"--quiet",
+		"--no-warnings",
+		"-f",
+		"bestaudio/best",
+		url,
+	)
+
+	output, err := cmd.Output()
+
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(string(output)), nil
 }
 
 func fetchYoutubeVideoInfo(rawUrl string) (*Info, error) {
-	parsedUrl, err := url.Parse(rawUrl)
+	url, err := util.ValidateUrl(rawUrl)
 
 	if err != nil {
 		return nil, err
-	}
-
-	var parsedUrlStr string
-
-	if parsedUrl.Scheme == "" {
-		parsedUrlStr = parsedUrl.RequestURI()
-	} else {
-		parsedUrlStr = parsedUrl.Host + parsedUrl.RequestURI()
 	}
 
 	cmd := exec.Command(
@@ -221,7 +241,7 @@ func fetchYoutubeVideoInfo(rawUrl string) (*Info, error) {
 		"--no-playlist",
 		// END: SUBJECT TO CHANGE
 		"-J",
-		parsedUrlStr,
+		url,
 	)
 
 	buffer := bytes.NewBufferString("")
