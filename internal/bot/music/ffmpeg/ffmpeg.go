@@ -10,7 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func CreateFFmpegStream(ctx context.Context, url string) (*bufio.Reader, error) {
+func CreateStream(ctx context.Context, url string) (*bufio.Reader, error) {
 	var ffmpegPath string
 
 	switch globals.OS {
