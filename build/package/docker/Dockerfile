@@ -38,9 +38,9 @@ RUN \
         "linux/arm/v7") DOWNLOAD_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-armhf-static.tar.xz" ;; \
         "linux/armv6") DOWNLOAD_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-armel-static.tar.xz" ;; \
     esac && \
-    wget $DOWNLOAD_URL -O ffmpeg.tar.xz &&\
-    tar xvf ffmpeg.tar.xz && \
-    mkdir /out && \
+    wget $DOWNLOAD_URL -O ffmpeg.tar.xz
+RUN tar xvf ffmpeg.tar.xz
+RUN mkdir /out && \
     cp ffmpeg*/ffmpeg /out/
     
 # copy files to final container
