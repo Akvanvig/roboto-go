@@ -14,19 +14,17 @@ RUN CGO_ENABLED=1 go build -ldflags="-w -s" -o /out/ ./...
 
 # clone yt-dlp release branch
 # https://github.com/yt-dlp/yt-dlp/tree/release
-FROM alpine/git AS yt-dlp-git
+FROM bitnami/git AS yt-dlp-git
 WORKDIR /out/
 RUN git clone https://github.com/yt-dlp/yt-dlp.git --single-branch -b release .
 
 
 # build yt-dlp
 FROM --platform=$BUILDPLATFORM python:3.10 AS yt-dlp-builder
-
 COPY --from=yt-dlp-git /out /data/
 WORKDIR /data/
 
 RUN python3 -m pip install -U pyinstaller -r requirements.txt
-#RUN python3 devscripts/make_lazy_extractors.py 
 RUN python3 pyinst.py
 RUN mkdir /out && cp dist/yt-dlp_linux /out/yt-dlp
 

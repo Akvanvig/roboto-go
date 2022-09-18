@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - 'master'
+      - 'main'
     tags:
       - 'v*.*.*'
 
@@ -40,7 +41,8 @@ jobs:
       id: metadata
       uses: docker/metadata-action@v4
       with: 
-        images: akvanvig/roboto-go
+        images: |
+          ghcr.io/akvanvig/roboto-go
         tags: |
           type=ref,event=branch
           type=semver,pattern={{version}}
