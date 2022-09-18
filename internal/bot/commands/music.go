@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/Akvanvig/roboto-go/internal/bot/music"
-	"github.com/Akvanvig/roboto-go/internal/util/youtubedl"
+	"github.com/Akvanvig/roboto-go/internal/bot/music/youtubedl"
 	"github.com/bwmarrin/discordgo"
 )
 

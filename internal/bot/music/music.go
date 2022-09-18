@@ -7,8 +7,8 @@ import (
 	"io/fs"
 	"sync"
 
+	"github.com/Akvanvig/roboto-go/internal/bot/music/youtubedl"
 	"github.com/Akvanvig/roboto-go/internal/util"
-	"github.com/Akvanvig/roboto-go/internal/util/youtubedl"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gammazero/deque"
 	"github.com/rs/zerolog/log"
