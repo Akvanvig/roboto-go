@@ -1,8 +1,8 @@
 package ffmpeg
 
 import (
-	"bufio"
 	"context"
+	"io"
 	"os/exec"
 	"path"
 
@@ -10,7 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func CreateStream(ctx context.Context, url string) (*bufio.Reader, error) {
+func New(ctx context.Context, url string) (io.ReadCloser, error) {
 	var ffmpegPath string
 
 	switch globals.OS {
@@ -24,7 +24,12 @@ func CreateStream(ctx context.Context, url string) (*bufio.Reader, error) {
 
 	cmd := exec.CommandContext(ctx,
 		ffmpegPath,
-		"-vn",
+		"-reconnect",
+		"1",
+		"-reconnect_streamed",
+		"1",
+		"-reconnect_delay_max",
+		"5",
 		"-i",
 		url,
 		"-f",
@@ -35,41 +40,22 @@ func CreateStream(ctx context.Context, url string) (*bufio.Reader, error) {
 		"2",
 		"-loglevel",
 		"warning",
-		"-reconnect",
-		"1",
-		"-reconnect_streamed",
-		"1",
-		"-reconnect_delay_max",
-		"5",
+		"-vn",
 		"pipe:1",
 	)
-
-	writer, err := cmd.StdinPipe()
-
-	if err != nil {
-		writer.Close()
-		return nil, err
-	}
 
 	reader, err := cmd.StdoutPipe()
 
 	if err != nil {
-		writer.Close()
+		return nil, err
+	}
+
+	err = cmd.Start()
+
+	if err != nil {
 		reader.Close()
 		return nil, err
 	}
 
-	bufferedReader := bufio.NewReaderSize(reader, 16384)
-
-	err = cmd.Start()
-
-	go func() {
-		cmd.Wait()
-	}()
-
-	if err != nil {
-		return nil, err
-	}
-
-	return bufferedReader, nil
+	return reader, nil
 }

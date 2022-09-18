@@ -52,7 +52,7 @@ func onPlay(cmd *Command, event *Event) {
 	if err != nil {
 		event.RespondUpdateMsg("An error occured in playing the video")
 	} else {
-		event.RespondUpdateMsg("Congratulations! You added a video to the queue")
+		event.RespondUpdateMsg("Congratulations! You added a video to the queue: " + videoInfo.Title)
 	}
 }
 
