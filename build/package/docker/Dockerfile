@@ -1,5 +1,8 @@
 FROM golang:alpine AS roboto-builder
 
+# dependencies required for layeh.com/gopus 
+RUN apk add --update opus-dev gcc libgcc libstdc++ g++
+
 # copy git data to build container
 COPY ./build /data/build/
 COPY ./cmd /data/cmd/
@@ -8,9 +11,8 @@ COPY ./go.mod ./go.sum /data/
 WORKDIR  /data/
 
 # build binary
-RUN apk add git
 RUN go get -d -v ./...
-RUN CGO_ENABLED=0 go build -ldflags="-w -s" -o /out/ ./...
+RUN CGO_ENABLED=1 go build -ldflags="-w -s" -o /out/ ./...
 
 # clone yt-dlp release branch
 # https://github.com/yt-dlp/yt-dlp/tree/release
@@ -28,32 +30,11 @@ RUN python3 -m pip install -U pyinstaller -r requirements.txt
 RUN python3 pyinst.py
 RUN mkdir /out && cp dist/yt-dlp_linux* /out/yt-dlp
 
-# fetch ffmpeg
-# FROM busybox AS ffmpeg-builder
-# ARG TARGETPLATFORM
-# WORKDIR /data
-# RUN \
-#     case ${TARGETPLATFORM} in \
-#         "linux/amd64") DOWNLOAD_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz" ;; \
-#         "linux/arm64") DOWNLOAD_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-arm64-static.tar.xz" ;; \
-#         "linux/arm/v7") DOWNLOAD_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-armhf-static.tar.xz" ;; \
-#         "linux/armv6") DOWNLOAD_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-armel-static.tar.xz" ;; \
-#     esac && \
-#     wget $DOWNLOAD_URL -O ffmpeg.tar.xz &&\
-#     tar xvf ffmpeg.tar.xz && \
-#     mkdir /out && \
-#     cp ffmpeg*/ffmpeg /out/
-
-# FROM ghcr.io/akvanvig/ffmpeg:latest AS ffmpeg-builder
-
+# copy files to final container
+#FROM gcr.io/distroless/static-debian11
 FROM alpine:3
 
 RUN apk add --no-cache ffmpeg
-    
-# copy files to final container
-#FROM gcr.io/distroless/static-debian11
-
-#COPY --from=ffmpeg-builder / /
 COPY --from=yt-dlp-builder /out/yt-dlp /bot/yt-dlp
 COPY --from=roboto-builder /out/roboto /bot/roboto
 COPY ./assets /bot/
