@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/Akvanvig/roboto-go/internal/bot/music"
+	"github.com/Akvanvig/roboto-go/internal/util/youtubedl"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -30,13 +31,33 @@ func onPlay(cmd *Command, event *Event) {
 			return
 		}
 
+		event.RespondLater()
 		player = music.GetGuildPlayer(guildID, true)
 		player.Connect(event.Session, vs.ChannelID)
+	} else {
+		event.RespondLater()
 	}
 
-	player.Play("")
+	videoInfo, err := youtubedl.GetVideoInfo(event.Data.Interaction.ApplicationCommandData().Options[0].StringValue())
+	var updateMsg string
 
-	event.RespondMsg("Congratulations! You played a video")
+	if err != nil {
+		updateMsg = "The provided url was invalid. Video names are not yet supported"
+	} else {
+		err = player.AddToQueue(videoInfo)
+
+		if err != nil {
+			updateMsg = "An error occured in playing the video"
+		} else {
+			updateMsg = "Congratulations! You added a video to the queue"
+		}
+	}
+
+	event.ResponseUpdate(
+		&ResponseDataUpdate{
+			Content: &updateMsg,
+		},
+	)
 }
 
 func onConnect(cmd *Command, event *Event) {
@@ -63,16 +84,25 @@ func onConnect(cmd *Command, event *Event) {
 		return
 	}
 
+	event.RespondLater()
+
 	player := music.GetGuildPlayer(guildID, true)
+	var updateMsg string
 
 	switch err := player.Connect(event.Session, channelID); err {
 	case nil:
-		event.RespondMsg("Connected to: " + voiceChannel.Name)
+		updateMsg = "Connected to: " + voiceChannel.Name
 	case err.(music.ConnectionError):
-		event.RespondMsg("The bot is already connected to the given voice channel")
+		updateMsg = "The bot is already connected to the given voice channel"
 	default:
-		event.RespondError(err)
+		//event.RespondError(err)
 	}
+
+	event.ResponseUpdate(
+		&ResponseDataUpdate{
+			Content: &updateMsg,
+		},
+	)
 }
 
 func onDisconnect(cmd *Command, event *Event) {
@@ -96,7 +126,7 @@ func init() {
 					{
 						Type:        discordgo.ApplicationCommandOptionString,
 						Name:        "video",
-						Description: "The link or the name of the video",
+						Description: "The link of the video",
 						Required:    true,
 					},
 				},

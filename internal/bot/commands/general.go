@@ -5,12 +5,12 @@ import (
 	"os"
 	"path"
 
-	. "github.com/Akvanvig/roboto-go/internal/globals"
+	"github.com/Akvanvig/roboto-go/internal/globals"
 	"github.com/bwmarrin/discordgo"
 )
 
 func onCatJam(cmd *Command, event *Event) {
-	file, err := os.Open(path.Join(RootPath, "assets/img/catjam.gif"))
+	file, err := os.Open(path.Join(globals.RootPath, "assets/img/catjam.gif"))
 
 	if err != nil {
 		event.RespondError(errors.New("Failed to open catjam asset"))

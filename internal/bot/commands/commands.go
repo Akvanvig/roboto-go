@@ -21,9 +21,10 @@ const (
 )
 
 type (
-	Response      = discordgo.InteractionResponse
-	ResponseData  = discordgo.InteractionResponseData
-	CommandOption = discordgo.ApplicationCommandOption
+	Response           = discordgo.InteractionResponse
+	ResponseDataUpdate = discordgo.WebhookEdit
+	ResponseData       = discordgo.InteractionResponseData
+	CommandOption      = discordgo.ApplicationCommandOption
 
 	Event struct {
 		Session *discordgo.Session           // Required
@@ -50,6 +51,17 @@ func (event *Event) Respond(response *Response) error {
 	}
 
 	return err
+}
+
+func (event *Event) ResponseUpdate(responseDataUpdate *ResponseDataUpdate) error {
+	_, err := event.Session.InteractionResponseEdit(event.Data.Interaction, responseDataUpdate)
+	return err
+}
+
+func (event *Event) RespondLater() error {
+	return event.Respond(&Response{
+		Type: ResponseMsgLater,
+	})
 }
 
 func (event *Event) RespondMsg(msg string) error {
