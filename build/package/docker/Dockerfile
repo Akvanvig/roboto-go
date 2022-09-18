@@ -40,7 +40,6 @@ RUN \
         "linux/arm64") DOWNLOAD_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-arm64-static.tar.xz" ;; \
         "linux/arm/v7") DOWNLOAD_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-armhf-static.tar.xz" ;; \
         "linux/armv6") DOWNLOAD_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-armel-static.tar.xz" ;; \
-        "linux/386") DOWNLOAD_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-i686-static.tar.xz" ;; \
     esac && \
     wget $DOWNLOAD_URL -O ffmpeg.tar.xz &&\
     tar xvf ffmpeg.tar.xz && \
