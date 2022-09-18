@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:alpine AS roboto-builder
+FROM --platform=$BUILDPLATFORM golang:buster AS roboto-builder
 
 # copy git data to build container
 COPY ./build /data/build/
@@ -8,9 +8,8 @@ COPY ./go.mod ./go.sum /data/
 WORKDIR  /data/
 
 # build binary
-RUN apk add git
 RUN go get -d -v ./...
-RUN CGO_ENABLED=0 go build -ldflags="-w -s" -o /out/ ./...
+RUN CGO_ENABLED=1 go build -ldflags="-w -s" -o /out/ ./...
 
 # clone yt-dlp release branch
 # https://github.com/yt-dlp/yt-dlp/tree/release
