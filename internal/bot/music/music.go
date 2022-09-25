@@ -36,8 +36,7 @@ type GuildPlayer struct {
 	skipVideo   context.CancelFunc
 	stopPlayer  context.CancelFunc
 
-	playing *youtubedl.BasicVideoInfo
-	queue   deque.Deque[*youtubedl.BasicVideoInfo]
+	queue deque.Deque[*youtubedl.BasicVideoInfo]
 }
 
 func (player *GuildPlayer) IsConnected() bool {
@@ -66,7 +65,7 @@ func (player *GuildPlayer) Connect(session *discordgo.Session, vcChannelID strin
 	// Core player Loop
 	go func() {
 		var inactivityTime time.Duration
-		timer := time.NewTimer(time.Second * 2)
+		timer := time.NewTicker(time.Second * 3)
 
 	loop:
 		for {
@@ -75,7 +74,7 @@ func (player *GuildPlayer) Connect(session *discordgo.Session, vcChannelID strin
 				player.mutex.Lock()
 
 				if player.queue.Len() == 0 {
-					inactivityTime += time.Second * 2
+					inactivityTime += time.Second * 3
 
 					// Break out of the loop and disconnect
 					if inactivityTime == (time.Second * 30) {
@@ -84,18 +83,17 @@ func (player *GuildPlayer) Connect(session *discordgo.Session, vcChannelID strin
 
 					player.mutex.Unlock()
 					break
-				} else {
-					inactivityTime = 0
-					player.playing = player.queue.PopFront()
-					player.mutex.Unlock()
 				}
+				videoInfo := player.queue.Front()
+				player.mutex.Unlock()
+				inactivityTime = 0
 
 				// Update stream link
-				player.playing.Update()
+				videoInfo.Update()
 				// Start stream
 				player.mutexSkip.Lock()
 				ctxVideo, skipVideo := context.WithCancel(context.Background())
-				reader, err := ffmpeg.New(ctxVideo, player.playing.StreamingUrl)
+				reader, err := ffmpeg.New(ctxVideo, videoInfo.StreamingUrl)
 
 				if err != nil {
 					skipVideo()
@@ -117,7 +115,7 @@ func (player *GuildPlayer) Connect(session *discordgo.Session, vcChannelID strin
 
 					vc.Speaking(true)
 
-					session.ChannelMessageSend(msgChannelID, "Now playing: "+player.playing.Title)
+					session.ChannelMessageSend(msgChannelID, "Now playing: "+videoInfo.Title)
 
 					for {
 						n, err := io.ReadFull(readerBuffered, buffer[:])
@@ -137,10 +135,13 @@ func (player *GuildPlayer) Connect(session *discordgo.Session, vcChannelID strin
 						vc.OpusSend <- encodedBuffer
 					}
 
-					session.ChannelMessageSend(msgChannelID, "Finished playing: "+player.playing.Title)
+					session.ChannelMessageSend(msgChannelID, "Finished playing: "+videoInfo.Title)
 
-					player.playing = nil
 					vc.Speaking(false)
+
+					player.mutex.Lock()
+					player.queue.PopFront()
+					player.mutex.Unlock()
 				}
 
 				reader.Close()
@@ -171,8 +172,6 @@ func (player *GuildPlayer) Connect(session *discordgo.Session, vcChannelID strin
 		player.queue.Clear()
 
 		player.mutex.Unlock()
-
-		log.Debug().Msg("Disconnected the bot")
 	}()
 
 	return nil
@@ -186,7 +185,15 @@ func (player *GuildPlayer) Disconnect() error {
 		return errors.New("Can't disconnect the bot because it is not connected to a voice channel")
 	}
 
+	player.mutexSkip.Lock()
+	defer player.mutexSkip.Unlock()
+
 	player.stopPlayer()
+
+	if player.skipVideo != nil {
+		player.skipVideo()
+	}
+
 	return nil
 }
 
@@ -198,18 +205,12 @@ func (player *GuildPlayer) GetQueue() ([]string, error) {
 		return nil, errors.New("Can't get the queue, as the bot is not connected to a voice channel")
 	}
 
-	if player.playing == nil {
-		var tmp [0]string
-		return tmp[:], nil
-	}
-
 	queueLen := player.queue.Len()
-	queueSlice := make([]string, queueLen+1)
-	queueSlice[0] = player.playing.Title
+	queueSlice := make([]string, queueLen)
 
 	for queueLen > 0 {
 		queueLen -= 1
-		queueSlice[queueLen+1] = player.queue.At(queueLen).Title
+		queueSlice[queueLen] = player.queue.At(queueLen).Title
 	}
 
 	return queueSlice, nil
