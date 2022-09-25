@@ -2,9 +2,10 @@ package commands
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/Akvanvig/roboto-go/internal/bot/music"
-	"github.com/Akvanvig/roboto-go/internal/bot/music/youtubedl"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -16,115 +17,148 @@ func isGuildCmd(cmd *Command, event *Event) error {
 	return nil
 }
 
-// Note(Fredrico):
-// All of this is going to be a hell to synchronize.
-// Remember: We need to make this async
-func onPlay(cmd *Command, event *Event) {
+func onConnect(cmd *Command, event *Event) {
+	event.RespondLater()
+
 	guildID := event.Data.Interaction.GuildID
-	player := music.GetGuildPlayer(guildID, false)
+	voiceChannelID := event.Data.Interaction.ApplicationCommandData().Options[0].StringValue()
+	var voiceChannel *discordgo.Channel
 
-	if player == nil {
-		vs, _ := event.Session.State.VoiceState(guildID, event.Data.Interaction.Member.User.ID)
+	{
+		guildChannels, _ := event.Session.GuildChannels(guildID)
 
-		if vs == nil {
-			event.RespondMsg("You must be connected to a voice channel or use the connect command to stream a video")
+		for _, channel := range guildChannels {
+			if channel.ID == voiceChannelID {
+				if channel.Type != discordgo.ChannelTypeGuildVoice {
+					break
+				}
+
+				voiceChannel = channel
+			}
+		}
+
+		if voiceChannel == nil {
+			event.RespondUpdateMsg("The provided channel id is not valid")
+			return
+		}
+	}
+
+	player := music.GetGuildPlayer(guildID)
+
+	go func() {
+		err := player.Connect(event.Session, voiceChannelID, event.Data.ChannelID)
+
+		if err != nil {
+			event.RespondUpdateMsg(err.Error())
 			return
 		}
 
-		event.RespondLater()
-		player = music.GetGuildPlayer(guildID, true)
-		player.Connect(event.Session, vs.ChannelID)
-	} else {
-		event.RespondLater()
-	}
-
-	videoInfo, err := youtubedl.GetVideoInfo(event.Data.Interaction.ApplicationCommandData().Options[0].StringValue())
-
-	// Note(Fredrico):
-	// This is not the only error GetVideoInfo returns
-	if err != nil {
-		event.RespondUpdateMsg("The provided url was invalid. Video names are not yet supported")
-		return
-	}
-
-	err = player.AddToQueue(videoInfo)
-
-	if err != nil {
-		event.RespondUpdateMsg("An error occured in playing the video")
-	} else {
-		event.RespondUpdateMsg("Congratulations! You added a video to the queue: " + videoInfo.Title)
-	}
-}
-
-func onConnect(cmd *Command, event *Event) {
-	guildID := event.Data.Interaction.GuildID
-	channelID := event.Data.Interaction.ApplicationCommandData().Options[0].StringValue()
-
-	guildChannels, _ := event.Session.GuildChannels(guildID)
-	var voiceChannel *discordgo.Channel
-
-	for _, channel := range guildChannels {
-		if channel.ID != channelID {
-			continue
-		}
-
-		if channel.Type == discordgo.ChannelTypeGuildVoice {
-			voiceChannel = channel
-		}
-
-		break
-	}
-
-	if voiceChannel == nil {
-		event.RespondMsg("The provided channel id is not valid")
-		return
-	}
-
-	event.RespondLater()
-
-	player := music.GetGuildPlayer(guildID, true)
-	switch err := player.Connect(event.Session, channelID); err {
-	case nil:
 		event.RespondUpdateMsg("Connected to: " + voiceChannel.Name)
-	case err.(music.ConnectionError):
-		event.RespondUpdateMsg("The bot is already connected to the given voice channel")
-	default:
-		event.RespondUpdateError(err)
-	}
+	}()
 }
 
 func onDisconnect(cmd *Command, event *Event) {
-	guildID := event.Data.Interaction.GuildID
-	err := music.DeleteGuildPlayer(guildID)
+	event.RespondLater()
 
-	if err != nil {
-		event.RespondMsg("The bot is not connected to a voice channel")
-	} else {
-		event.RespondMsg("The bot was disconnected from the voice channel")
+	guildID := event.Data.Interaction.GuildID
+	player := music.GetGuildPlayer(guildID)
+
+	go func() {
+		err := player.Disconnect()
+
+		if err != nil {
+			event.RespondUpdateMsg(err.Error())
+			return
+		}
+
+		event.RespondUpdateMsg("Disconnected the bot")
+	}()
+}
+
+func onPlay(cmd *Command, event *Event) {
+	event.RespondLater()
+
+	guildID := event.Data.Interaction.GuildID
+	videoUrl := event.Data.Interaction.ApplicationCommandData().Options[0].StringValue()
+
+	player := music.GetGuildPlayer(guildID)
+
+	if !player.IsConnected() {
+		vs, _ := event.Session.State.VoiceState(guildID, event.Data.Interaction.Member.User.ID)
+
+		if vs == nil {
+			event.RespondUpdateMsg("You must be connected to a voice channel or use the connect command to stream a video")
+			return
+		}
+
+		player.Connect(event.Session, vs.ChannelID, event.Data.ChannelID)
 	}
+
+	go func() {
+		videoInfo, err := player.AddToQueue(videoUrl)
+
+		if err != nil {
+			// This error message is not necessarily correct
+			event.RespondUpdateMsg("The provided url was invalid. Video names are not yet supported")
+			return
+		}
+
+		event.RespondUpdateMsg("Congratulations! You added a video to the queue: " + videoInfo.Title)
+	}()
+}
+
+func onSkip(cmd *Command, event *Event) {
+	event.RespondLater()
+
+	guildID := event.Data.Interaction.GuildID
+	numSkip := 1
+
+	if len(event.Data.Interaction.ApplicationCommandData().Options) == 1 {
+		numSkip = int(event.Data.Interaction.ApplicationCommandData().Options[0].IntValue())
+	}
+
+	player := music.GetGuildPlayer(guildID)
+
+	go func() {
+		n, err := player.SkipQueue(numSkip)
+
+		if err != nil {
+			event.RespondUpdateMsg(err.Error())
+			return
+		}
+
+		event.RespondUpdateMsg(fmt.Sprintf("Skipped the given number of videos: %d", n))
+	}()
+}
+
+func onQueue(cmd *Command, event *Event) {
+	event.RespondLater()
+
+	guildID := event.Data.Interaction.GuildID
+	player := music.GetGuildPlayer(guildID)
+
+	go func() {
+		queue, err := player.GetQueue()
+
+		if err != nil {
+			event.RespondUpdateMsg(err.Error())
+			return
+		}
+
+		if len(queue) == 0 {
+			event.RespondUpdateMsg("The queue is empty")
+		} else {
+			event.RespondUpdateMsg("```" + strings.Join(queue, "\n") + "```")
+		}
+	}()
 }
 
 func init() {
 	musicCommands := []*Command{
 		{
 			State: CommandBase{
-				Name:        "play",
-				Description: "Stream a youtube video",
-				Options: []*CommandOption{
-					{
-						Type:        discordgo.ApplicationCommandOptionString,
-						Name:        "video",
-						Description: "The link of the video",
-						Required:    true,
-					},
-				},
-			},
-			Handler: onPlay,
-		},
-		{
-			State: CommandBase{
 				Name:        "connect",
-				Description: "Connect bot to a voice channel",
+				Description: "Connect the bot to a voice channel",
 				Options: []*CommandOption{
 					{
 						Type:        discordgo.ApplicationCommandOptionString,
@@ -142,6 +176,43 @@ func init() {
 				Description: "Disconnect the bot from voice",
 			},
 			Handler: onDisconnect,
+		},
+		{
+			State: CommandBase{
+				Name:        "play",
+				Description: "Play a youtube video",
+				Options: []*CommandOption{
+					{
+						Type:        discordgo.ApplicationCommandOptionString,
+						Name:        "video",
+						Description: "The link of the video",
+						Required:    true,
+					},
+				},
+			},
+			Handler: onPlay,
+		},
+		{
+			State: CommandBase{
+				Name:        "skip",
+				Description: "Skip one or more queued videos",
+				Options: []*CommandOption{
+					{
+						Type:        discordgo.ApplicationCommandOptionInteger,
+						Name:        "skippedvideos",
+						Description: "The number of videos to skip",
+						Required:    false,
+					},
+				},
+			},
+			Handler: onSkip,
+		},
+		{
+			State: CommandBase{
+				Name:        "queue",
+				Description: "Get the current queue",
+			},
+			Handler: onQueue,
 		},
 	}
 
