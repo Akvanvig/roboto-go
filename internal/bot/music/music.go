@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Akvanvig/roboto-go/internal/bot/music/ffmpeg"
@@ -30,13 +31,13 @@ type ConnectionError string
 type GuildPlayer struct {
 	GuildID string
 	// Internal
-	mutex       sync.Mutex
-	mutexVolume sync.Mutex
-	mutexSkip   sync.Mutex
-	skipVideo   context.CancelFunc
-	stopPlayer  context.CancelFunc
+	mutex      sync.Mutex
+	mutexSkip  sync.Mutex
+	skipVideo  context.CancelFunc
+	stopPlayer context.CancelFunc
 
-	queue deque.Deque[*youtubedl.BasicVideoInfo]
+	queue  deque.Deque[*youtubedl.BasicVideoInfo]
+	volume uint32
 }
 
 func (player *GuildPlayer) IsConnected() bool {
@@ -45,6 +46,9 @@ func (player *GuildPlayer) IsConnected() bool {
 	return player.stopPlayer != nil
 }
 
+// Note(Fredrico):
+// This should probably be refactored to some degree. Look into improving the readability of the inner loop.
+// Perhaps split it into its own function?
 func (player *GuildPlayer) Connect(session *discordgo.Session, vcChannelID string, msgChannelID string) error {
 	player.mutex.Lock()
 	defer player.mutex.Unlock()
@@ -268,6 +272,16 @@ func (player *GuildPlayer) SkipQueue(num int) (int, error) {
 	}
 }
 
+func (player *GuildPlayer) SetVolume(percentage uint32) error {
+	if percentage > 100 {
+		return errors.New("BLALBLA")
+	}
+
+	atomic.StoreUint32(&player.volume, percentage)
+
+	return nil
+}
+
 var allGuildPlayers = map[string]*GuildPlayer{}
 
 func GetGuildPlayer(guildID string) *GuildPlayer {
@@ -276,6 +290,7 @@ func GetGuildPlayer(guildID string) *GuildPlayer {
 	if !ok {
 		player = &GuildPlayer{
 			GuildID: guildID,
+			volume:  100,
 		}
 		allGuildPlayers[guildID] = player
 	}
