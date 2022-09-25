@@ -199,7 +199,7 @@ func init() {
 				Options: []*CommandOption{
 					{
 						Type:        discordgo.ApplicationCommandOptionInteger,
-						Name:        "skippedvideos",
+						Name:        "number",
 						Description: "The number of videos to skip",
 						Required:    false,
 					},
