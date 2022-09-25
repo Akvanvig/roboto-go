@@ -287,19 +287,8 @@ func GetVideoInfo(rawUrl string) (*BasicVideoInfo, error) {
 		return nil, err
 	}
 
-	var bestFormat Format
-	var bestBitrate float64
-
-	for _, format := range rawInfo.Formats {
-		if format.Resolution == "audio only" && format.ABR > bestBitrate {
-			bestFormat = format
-			bestBitrate = format.ABR
-		}
-	}
-
 	return &BasicVideoInfo{
-		Title:        rawInfo.Title,
-		Url:          rawInfo.WebpageURL,
-		StreamingUrl: bestFormat.URL,
+		Title: rawInfo.Title,
+		Url:   rawInfo.WebpageURL,
 	}, nil
 }

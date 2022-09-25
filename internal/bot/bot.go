@@ -43,7 +43,7 @@ func Start(token *string) {
 
 	commands.Create(session)
 
-	log.Info().Msg("Bot is ready")
+	log.Info().Msg("Finished creating commands, bot is ready")
 }
 
 func Stop() {
