@@ -110,6 +110,8 @@ func (player *GuildPlayer) Connect(session *discordgo.Session, vcChannelID strin
 
 				readerBuffered := bufio.NewReaderSize(reader, 16384)
 
+				session.ChannelMessageSend(msgChannelID, "Now playing: "+videoInfo.Title)
+
 				// Play the stream
 				{
 					// These represent 1 buffer
@@ -118,8 +120,6 @@ func (player *GuildPlayer) Connect(session *discordgo.Session, vcChannelID strin
 					encoder, _ := gopus.NewEncoder(OpusSamplingRate, OpusChannels, gopus.Audio)
 
 					vc.Speaking(true)
-
-					session.ChannelMessageSend(msgChannelID, "Now playing: "+videoInfo.Title)
 
 					for {
 						n, err := io.ReadFull(readerBuffered, buffer[:])
@@ -139,16 +139,15 @@ func (player *GuildPlayer) Connect(session *discordgo.Session, vcChannelID strin
 						vc.OpusSend <- encodedBuffer
 					}
 
-					session.ChannelMessageSend(msgChannelID, "Finished playing: "+videoInfo.Title)
-
 					vc.Speaking(false)
-
-					player.mutex.Lock()
-					player.queue.PopFront()
-					player.mutex.Unlock()
+					reader.Close()
 				}
 
-				reader.Close()
+				player.mutex.Lock()
+				player.queue.PopFront()
+				player.mutex.Unlock()
+
+				session.ChannelMessageSend(msgChannelID, "Finished playing: "+videoInfo.Title)
 
 			case <-ctxPlayer.Done():
 				player.mutex.Lock()
