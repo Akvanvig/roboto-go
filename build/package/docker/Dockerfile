@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:alpine AS roboto-builder
+FROM golang:alpine AS roboto-builder
 
 # copy git data to build container
 COPY ./build /data/build/
@@ -20,7 +20,7 @@ RUN git clone https://github.com/yt-dlp/yt-dlp.git --single-branch -b release .
 
 
 # build yt-dlp
-FROM --platform=$BUILDPLATFORM python:3.10 AS yt-dlp-builder
+FROM python:3.10 AS yt-dlp-builder
 COPY --from=yt-dlp-git /out /data/
 WORKDIR /data/
 
@@ -29,7 +29,7 @@ RUN python3 pyinst.py
 RUN mkdir /out && cp dist/yt-dlp_linux /out/yt-dlp
 
 # fetch ffmpeg
-FROM --platform=$BUILDPLATFORM busybox AS ffmpeg-builder
+FROM busybox AS ffmpeg-builder
 ARG TARGETPLATFORM
 WORKDIR /data
 RUN \
@@ -45,7 +45,7 @@ RUN \
     cp ffmpeg*/ffmpeg /out/
     
 # copy files to final container
-FROM --platform=$BUILDPLATFORM gcr.io/distroless/static-debian11
+FROM gcr.io/distroless/static-debian11
 
 COPY --from=roboto-builder /out/roboto /bot/roboto
 COPY --from=yt-dlp-builder /out/yt-dlp /bot/yt-dlp
