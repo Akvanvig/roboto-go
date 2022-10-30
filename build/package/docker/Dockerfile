@@ -37,7 +37,7 @@ FROM alpine:3
 RUN apk add --no-cache ffmpeg
 COPY --from=yt-dlp-builder /out/yt-dlp /bot/yt-dlp
 COPY --from=roboto-builder /out/roboto /bot/roboto
-COPY ./assets /bot/
+COPY ./assets /bot/assets/
 
 USER nobody:nogroup
 
