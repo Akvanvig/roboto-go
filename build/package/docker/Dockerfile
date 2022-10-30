@@ -20,36 +20,42 @@ RUN git clone https://github.com/yt-dlp/yt-dlp.git --single-branch -b release .
 
 
 # build yt-dlp
-FROM python:3.10 AS yt-dlp-builder
+FROM python:3.11 AS yt-dlp-builder
 COPY --from=yt-dlp-git /out /data/
 WORKDIR /data/
 
 RUN python3 -m pip install -U pyinstaller -r requirements.txt
 RUN python3 pyinst.py
-RUN mkdir /out && cp dist/yt-dlp_linux /out/yt-dlp
+RUN mkdir /out && cp dist/yt-dlp_linux* /out/yt-dlp
 
 # fetch ffmpeg
-FROM busybox AS ffmpeg-builder
-ARG TARGETPLATFORM
-WORKDIR /data
-RUN \
-    case ${TARGETPLATFORM} in \
-        "linux/amd64") DOWNLOAD_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz" ;; \
-        "linux/arm64") DOWNLOAD_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-arm64-static.tar.xz" ;; \
-        "linux/arm/v7") DOWNLOAD_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-armhf-static.tar.xz" ;; \
-        "linux/armv6") DOWNLOAD_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-armel-static.tar.xz" ;; \
-    esac && \
-    wget $DOWNLOAD_URL -O ffmpeg.tar.xz &&\
-    tar xvf ffmpeg.tar.xz && \
-    mkdir /out && \
-    cp ffmpeg*/ffmpeg /out/
+# FROM busybox AS ffmpeg-builder
+# ARG TARGETPLATFORM
+# WORKDIR /data
+# RUN \
+#     case ${TARGETPLATFORM} in \
+#         "linux/amd64") DOWNLOAD_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz" ;; \
+#         "linux/arm64") DOWNLOAD_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-arm64-static.tar.xz" ;; \
+#         "linux/arm/v7") DOWNLOAD_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-armhf-static.tar.xz" ;; \
+#         "linux/armv6") DOWNLOAD_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-armel-static.tar.xz" ;; \
+#     esac && \
+#     wget $DOWNLOAD_URL -O ffmpeg.tar.xz &&\
+#     tar xvf ffmpeg.tar.xz && \
+#     mkdir /out && \
+#     cp ffmpeg*/ffmpeg /out/
+
+# FROM ghcr.io/akvanvig/ffmpeg:latest AS ffmpeg-builder
+
+FROM alpine:3
+
+RUN apk add --no-cache ffmpeg
     
 # copy files to final container
-FROM gcr.io/distroless/static-debian11
+#FROM gcr.io/distroless/static-debian11
 
-COPY --from=roboto-builder /out/roboto /bot/roboto
+#COPY --from=ffmpeg-builder / /
 COPY --from=yt-dlp-builder /out/yt-dlp /bot/yt-dlp
-COPY --from=ffmpeg-builder /out/ffmpeg /bot/ffmpeg
+COPY --from=roboto-builder /out/roboto /bot/roboto
 COPY ./assets /bot/
 
 USER nobody:nogroup
