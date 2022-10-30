@@ -1,4 +1,6 @@
+
 FROM golang:alpine AS roboto-builder
+
 
 # copy git data to build container
 COPY ./build /data/build/
@@ -8,7 +10,6 @@ COPY ./go.mod ./go.sum /data/
 WORKDIR  /data/
 
 # build binary
-RUN apk add git
 RUN go get -d -v ./...
 RUN CGO_ENABLED=1 go build -ldflags="-w -s" -o /out/ ./...
 
@@ -49,6 +50,7 @@ RUN mkdir /out && cp dist/yt-dlp_linux* /out/yt-dlp
 FROM alpine:3
 
 RUN apk add --no-cache ffmpeg
+
     
 # copy files to final container
 #FROM gcr.io/distroless/static-debian11
