@@ -17,7 +17,7 @@ func New(ctx context.Context, url string) (io.ReadCloser, error) {
 	case "windows":
 		ffmpegPath = path.Join(globals.RootPath, "ffmpeg.exe")
 	case "linux":
-		ffmpegPath = path.Join(globals.RootPath, "ffmpeg")
+		ffmpegPath = "ffmpeg"
 	default:
 		log.Fatal().Msg("Trying to run ffmpeg on an unsupported system")
 	}
