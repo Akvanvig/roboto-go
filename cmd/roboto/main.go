@@ -4,7 +4,7 @@ import (
 	"flag"
 	"os"
 	"os/signal"
-	"path"
+	"path/filepath"
 	"runtime"
 
 	"github.com/Akvanvig/roboto-go/internal/bot"
@@ -19,7 +19,7 @@ var (
 	token = flag.String("token", "", "Bot access token")
 )
 
-func init() {
+func main() {
 	// Setup logger
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
@@ -34,15 +34,13 @@ func init() {
 		log.Warn().Msg("Dev mode is enabled, do not use this flag in production")
 
 		_, filename, _, _ := runtime.Caller(0)
-		globals.RootPath = path.Join(path.Dir(filename), "../..")
+		globals.RootPath = filepath.Join(filepath.Dir(filename), "../..")
 	}
 
 	if *token == "" {
 		log.Fatal().Msg("Token argument can not be empty")
 	}
-}
 
-func main() {
 	channel := make(chan os.Signal, 1)
 	signal.Notify(channel, os.Interrupt)
 

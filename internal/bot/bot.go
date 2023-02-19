@@ -20,6 +20,24 @@ func onInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	commands.Process(s, i)
 }
 
+// Note(Fredrico):
+// Currently discordgo has not added support for auditlog entry creations yet...
+// See https://github.com/bwmarrin/discordgo/pull/1314
+/*
+func onAuditlog(s *discordgo.Session, l *discordgo.AuditLogEntryCreate) {
+	switch *l.ActionType {
+	case discordgo.AuditLogActionMemberKick:
+		fallthrough
+	case discordgo.AuditLogActionMemberMove:
+		fallthrough
+	case discordgo.AuditLogActionMemberDisconnect:
+		if l.TargetID == s.State.User.ID {
+			log.Info().Msg("Detected event!")
+		}
+	}
+}
+*/
+
 func Start(token *string) {
 	var err error
 
@@ -34,6 +52,7 @@ func Start(token *string) {
 	session.AddHandler(onReady)
 	session.AddHandler(onMsg)
 	session.AddHandler(onInteraction)
+	//session.AddHandler(onAuditlog)
 
 	err = session.Open()
 

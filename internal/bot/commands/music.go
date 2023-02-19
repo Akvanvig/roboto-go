@@ -79,7 +79,7 @@ func onPlay(cmd *Command, event *Event) {
 	event.RespondLater()
 
 	guildID := event.Data.Interaction.GuildID
-	videoUrl := event.Data.Interaction.ApplicationCommandData().Options[0].StringValue()
+	search := event.Data.Interaction.ApplicationCommandData().Options[0].StringValue()
 
 	player := music.GetGuildPlayer(guildID)
 
@@ -95,11 +95,10 @@ func onPlay(cmd *Command, event *Event) {
 	}
 
 	go func() {
-		videoInfo, err := player.AddToQueue(videoUrl)
+		videoInfo, err := player.AddToQueue(search)
 
 		if err != nil {
-			// This error message is not necessarily correct
-			event.RespondUpdateMsg("The provided url was invalid. Video names are not yet supported")
+			event.RespondUpdateMsg(err.Error())
 			return
 		}
 
@@ -153,8 +152,26 @@ func onQueue(cmd *Command, event *Event) {
 	}()
 }
 
+func onSetVolume(cmd *Command, event *Event) {
+	event.RespondLater()
+
+	guildID := event.Data.Interaction.GuildID
+	player := music.GetGuildPlayer(guildID)
+	volume := uint32(event.Data.Interaction.ApplicationCommandData().Options[0].IntValue())
+
+	go func() {
+		player.SetVolume(volume)
+		event.RespondUpdateMsg(fmt.Sprintf("Player volume set to '%d'", volume))
+	}()
+}
+
 func init() {
-	musicCommands := []*Command{
+	var (
+		minVolume = 0.0
+		maxVolume = 300.0
+	)
+
+	musicCommands := []Command{
 		{
 			State: CommandBase{
 				Name:        "connect",
@@ -206,6 +223,23 @@ func init() {
 				},
 			},
 			Handler: onSkip,
+		},
+		{
+			State: CommandBase{
+				Name:        "volume",
+				Description: "Set the bot volume",
+				Options: []*CommandOption{
+					{
+						Type:        discordgo.ApplicationCommandOptionInteger,
+						Name:        "number",
+						Description: "The volume percentage as an integer",
+						Required:    true,
+						MinValue:    &minVolume,
+						MaxValue:    maxVolume,
+					},
+				},
+			},
+			Handler: onSetVolume,
 		},
 		{
 			State: CommandBase{

@@ -1,5 +1,3 @@
 package globals
 
-var (
-	RootPath string
-)
+var RootPath string = "./"

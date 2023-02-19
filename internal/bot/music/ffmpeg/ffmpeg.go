@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 	"os/exec"
-	"path"
+	"path/filepath"
 
 	"github.com/Akvanvig/roboto-go/internal/globals"
 	"github.com/rs/zerolog/log"
@@ -15,9 +15,9 @@ func New(ctx context.Context, url string) (io.ReadCloser, error) {
 
 	switch globals.OS {
 	case "windows":
-		ffmpegPath = path.Join(globals.RootPath, "ffmpeg.exe")
+		ffmpegPath = filepath.Join(globals.RootPath, "ffmpeg.exe")
 	case "linux":
-		ffmpegPath = path.Join(globals.RootPath, "ffmpeg")
+		ffmpegPath = "ffmpeg"
 	default:
 		log.Fatal().Msg("Trying to run ffmpeg on an unsupported system")
 	}

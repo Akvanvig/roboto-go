@@ -3,14 +3,14 @@ package commands
 import (
 	"errors"
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/Akvanvig/roboto-go/internal/globals"
 	"github.com/bwmarrin/discordgo"
 )
 
 func onCatJam(cmd *Command, event *Event) {
-	file, err := os.Open(path.Join(globals.RootPath, "assets/img/catjam.gif"))
+	file, err := os.Open(filepath.Join(globals.RootPath, "assets/img/catjam.gif"))
 
 	if err != nil {
 		event.RespondError(errors.New("Failed to open catjam asset"))
@@ -67,7 +67,7 @@ func onLetsPlaySubmit(cmd *Command, event *Event, identifier string) {
 }
 
 func init() {
-	generalCommands := []*Command{
+	generalCommands := []Command{
 		{
 			State: CommandBase{
 				Name:        "catjam",

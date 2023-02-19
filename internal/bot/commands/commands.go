@@ -41,7 +41,7 @@ type (
 	}
 )
 
-var allCommands = map[string]*Command{}
+var allCommands = map[string]Command{}
 
 func (event *Event) Respond(response *Response) error {
 	err := event.Session.InteractionRespond(event.Data.Interaction, response)
@@ -128,13 +128,13 @@ func (command *Command) GenerateModalID(userData string) string {
 	return command.State.Name
 }
 
-func addCommands(commands []*Command) {
+func addCommands(commands []Command) {
 	for _, cmd := range commands {
 		allCommands[cmd.State.Name] = cmd
 	}
 }
 
-func addCommandsAdvanced(commands []*Command, permissions int64, check func(cmd *Command, event *Event) error) {
+func addCommandsAdvanced(commands []Command, permissions int64, check func(cmd *Command, event *Event) error) {
 	for _, cmd := range commands {
 		// See https://github.com/bwmarrin/discordgo/blob/v0.26.1/structs.go#L1988 for permissions
 		cmd.State.DefaultMemberPermissions = &permissions
@@ -194,13 +194,13 @@ func Process(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		}
 
 		if cmd.Check != nil {
-			err = cmd.Check(cmd, &event)
+			err = cmd.Check(&cmd, &event)
 		}
 
 		if err != nil {
 			event.RespondError(err)
 		} else {
-			cmd.Handler(cmd, &event)
+			cmd.Handler(&cmd, &event)
 		}
 
 		return
@@ -213,9 +213,9 @@ func Process(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		}
 
 		if len(modalData) > 1 {
-			cmd.HandlerModalSubmit(cmd, &event, modalData[1])
+			cmd.HandlerModalSubmit(&cmd, &event, modalData[1])
 		} else {
-			cmd.HandlerModalSubmit(cmd, &event, "")
+			cmd.HandlerModalSubmit(&cmd, &event, "")
 		}
 
 		return
