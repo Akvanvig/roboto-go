@@ -20,21 +20,29 @@ var (
 )
 
 func main() {
-	// Setup logger
+	// Setup
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-
-	// Parse arguments
 	flag.Parse()
 
-	// Note(Fredrico).
-	// If we are running in dev mode, we automatically set the RootPath to be the same as go.mod's directory
 	if *dev {
+		// Note(Fredrico).
+		// If we are running in dev mode, we automatically set the RootPath to be the same as go.mod's directory
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
 		log.Warn().Msg("Dev mode is enabled, do not use this flag in production")
 
-		_, filename, _, _ := runtime.Caller(0)
-		globals.RootPath = filepath.Join(filepath.Dir(filename), "../..")
+		_, mainPath, _, _ := runtime.Caller(0)
+		globals.RootPath = filepath.Join(filepath.Dir(mainPath), "../..")
+	} else {
+		// Note(Fredrico):
+		// Else, set RootPath to executable path
+		execPath, err := os.Executable()
+
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to find running executable path")
+		}
+
+		globals.RootPath = filepath.Dir(execPath)
 	}
 
 	if *token == "" {
