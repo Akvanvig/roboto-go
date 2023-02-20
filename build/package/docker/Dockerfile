@@ -1,7 +1,9 @@
-FROM golang:alpine AS roboto-builder
+FROM golang:bullseye AS roboto-builder
 
 # dependencies required for layeh.com/gopus 
-RUN apk add --update opus-dev gcc libgcc libstdc++ g++
+# RUN apk add --update opus-dev gcc libgcc libstdc++ g++
+RUN apt-get update \
+  && apt-get install -y libopus-dev gcc libgcc-10-dev libstdc++-10-dev g++
 
 # copy git data to build container
 COPY ./build /data/build/
