@@ -7,12 +7,14 @@ import (
 
 	"github.com/Akvanvig/roboto-go/internal/globals"
 	"github.com/bwmarrin/discordgo"
+	"github.com/rs/zerolog/log"
 )
 
 func onCatJam(cmd *Command, event *Event) {
 	file, err := os.Open(filepath.Join(globals.RootPath, "assets/img/catjam.gif"))
 
 	if err != nil {
+		log.Error().Err(err).Send()
 		event.RespondError(errors.New("Failed to open catjam asset"))
 		return
 	}

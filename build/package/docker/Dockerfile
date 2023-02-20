@@ -17,7 +17,7 @@ RUN CGO_ENABLED=1 go build -ldflags="-w -s" -o /out/ ./...
 FROM alpine:3 AS roboto-downloader
 # Download latest yt-dlp for aarch64
 ADD https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux_aarch64 /out/yt-dlp
-RUN chmod +x /out/yt-dlp
+RUN chmod +777 /out/yt-dlp
 
 # copy files to final container
 #FROM gcr.io/distroless/static-debian11

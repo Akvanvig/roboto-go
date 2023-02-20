@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/Akvanvig/roboto-go/internal/globals"
@@ -145,7 +146,7 @@ type Subtitle struct {
 func youtubedlPath() string {
 	var ytdlPath string
 
-	switch globals.OS {
+	switch runtime.GOOS {
 	case "windows":
 		ytdlPath = filepath.Join(globals.RootPath, "yt-dlp.exe")
 	case "linux":
