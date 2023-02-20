@@ -373,7 +373,7 @@ func (videoInfo *BasicVideoInfo) CreateEmbed(title string, simple bool) *discord
 		iconUrl = "https://media.tenor.com/V0PyK4xovxAAAAAC/peepo-dance-pepe.gif"
 		fields = []*discordgo.MessageEmbedField{
 			{
-				Name:  "By",
+				Name:  "Uploader",
 				Value: videoInfo.Uploader,
 			},
 			{

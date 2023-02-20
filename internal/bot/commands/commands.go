@@ -135,8 +135,10 @@ func addCommands(commands []Command) {
 
 func addCommandsAdvanced(commands []Command, permissions int64, check func(cmd *Command, event *Event) error) {
 	for _, cmd := range commands {
+		// Note(Fredrico):
+		// Currently the member permission feature seems to be a little bork
 		// See https://github.com/bwmarrin/discordgo/blob/v0.26.1/structs.go#L1988 for permissions
-		cmd.State.DefaultMemberPermissions = &permissions
+		//cmd.State.DefaultMemberPermissions = &permissions
 		cmd.Check = check
 
 		allCommands[cmd.State.Name] = cmd

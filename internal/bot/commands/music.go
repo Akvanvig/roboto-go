@@ -279,5 +279,5 @@ func init() {
 		},
 	}
 
-	addCommandsAdvanced(musicCommands, 0, isGuildCmd)
+	addCommandsAdvanced(musicCommands, discordgo.PermissionSendMessages, isGuildCmd)
 }
