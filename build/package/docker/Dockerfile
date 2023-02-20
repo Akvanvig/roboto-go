@@ -26,7 +26,7 @@ RUN chmod 755 /out/yt-dlp
 FROM debian:bullseye-slim
 
 RUN apt update \
-  && apt-get install -y ffmpeg \
+  && apt-get install -y ffmpeg ca-certificates \
   && apt-get clean
 USER nobody:nogroup
 WORKDIR  /bot/
