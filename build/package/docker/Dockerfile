@@ -21,9 +21,11 @@ RUN chmod 755 /out/yt-dlp
 
 # copy files to final container
 #FROM gcr.io/distroless/static-debian11
-FROM alpine:3
+FROM debian:bullseye-slim
 
-RUN apk add --no-cache ffmpeg
+RUN apt update \
+  && apt-get install -y ffmpeg \
+  && apt-get clean
 USER nobody:nogroup
 WORKDIR  /bot/
 
