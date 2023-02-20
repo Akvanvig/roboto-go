@@ -19,11 +19,13 @@ RUN CGO_ENABLED=1 go build -ldflags="-w -s" -o /out/ ./...
 FROM alpine:3
 
 RUN apk add --no-cache ffmpeg
+USER nobody:nogroup
+
 COPY --from=roboto-builder /out/roboto /bot/roboto
 COPY ./assets /bot/assets/
 # Download latest yt-dlp for aarch64
 ADD https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux_aarch64 /bot/yt-dlp
+RUN chmod +x /bot/yt-dlp
 
-USER nobody:nogroup
 
 ENTRYPOINT [ "/bot/roboto" ]
