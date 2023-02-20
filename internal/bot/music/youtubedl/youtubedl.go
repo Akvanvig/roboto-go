@@ -53,6 +53,7 @@ type Info struct {
 	UploaderID         string  `json:"uploader_id"`          // Nickname or id of the video uploader
 	Channel            string  `json:"channel"`              // Full name of the channel the video is uploaded on
 	ChannelID          string  `json:"channel_id"`           // Id of the channel
+	ChannelUrl         string  `json:"channel_url"`          // Url of the channel
 	Duration           float64 `json:"duration"`             // Length of the video in seconds
 	ViewCount          float64 `json:"view_count"`           // How many users have watched the video on the platform
 	LikeCount          float64 `json:"like_count"`           // Number of positive ratings of the video
@@ -141,16 +142,6 @@ type Subtitle struct {
 	Bytes []byte `json:"-"`
 }
 
-type BasicVideoInfo struct {
-	Title        string
-	Url          string
-	StreamingUrl string
-}
-
-func (videoInfo *BasicVideoInfo) Update() {
-	videoInfo.StreamingUrl, _ = fetchYoutubeVideoStreamingUrl(videoInfo.Url)
-}
-
 func youtubedlPath() string {
 	var ytdlPath string
 
@@ -166,7 +157,7 @@ func youtubedlPath() string {
 	return ytdlPath
 }
 
-func fetchYoutubeVideoStreamingUrl(url string) (string, error) {
+func FetchYoutubeVideoStreamingUrl(url string) (string, error) {
 	cmd := exec.Command(
 		youtubedlPath(),
 		"--get-url",
@@ -191,7 +182,7 @@ func fetchYoutubeVideoStreamingUrl(url string) (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
-func fetchYoutubeVideoInfo(search string) (*Info, error) {
+func FetchYoutubeVideoInfo(search string) (*Info, error) {
 	cmd := exec.Command(
 		youtubedlPath(),
 		"--ignore-errors",
@@ -249,15 +240,12 @@ func fetchYoutubeVideoInfo(search string) (*Info, error) {
 	return &info.Entries[0], nil
 }
 
-func GetVideoInfo(search string) (*BasicVideoInfo, error) {
-	rawInfo, err := fetchYoutubeVideoInfo(search)
+func GetVideoInfo(search string) (*Info, error) {
+	rawInfo, err := FetchYoutubeVideoInfo(search)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &BasicVideoInfo{
-		Title: rawInfo.Title,
-		Url:   rawInfo.WebpageURL,
-	}, nil
+	return rawInfo, nil
 }

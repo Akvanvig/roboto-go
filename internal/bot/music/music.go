@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"context"
 	"errors"
+	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -32,16 +34,29 @@ var allGuildPlayers = map[string]*GuildPlayer{}
 type GuildPlayer struct {
 	GuildID string
 	// Internal
-	channelID       string
-	session         *discordgo.Session
-	voiceConnection *discordgo.VoiceConnection
-	queue           deque.Deque[*youtubedl.BasicVideoInfo]
-	volume          uint32
+	channelID        string
+	session          *discordgo.Session
+	voiceConnection  *discordgo.VoiceConnection
+	queue            deque.Deque[*BasicVideoInfo]
+	volume           atomic.Uint32
+	replayModeActive atomic.Bool
 	// Actions
 	stop context.CancelFunc
 	skip chan bool
 	// Mutexes
 	mutex sync.Mutex
+}
+
+type BasicVideoInfo struct {
+	Title        string
+	Requestor    string
+	Uploader     string
+	Url          string
+	RequestorUrl string
+	ThumbnailUrl string
+	StreamingUrl string
+	ChannelUrl   string
+	Duration     float64
 }
 
 func (player *GuildPlayer) loop(ctx context.Context) {
@@ -73,7 +88,7 @@ loop:
 			player.play(videoInfo)
 
 			player.mutex.Lock()
-			if player.queue.Len() > 0 {
+			if player.queue.Len() > 0 && !player.replayModeActive.Load() {
 				player.queue.PopFront()
 			}
 			player.mutex.Unlock()
@@ -95,7 +110,7 @@ loop:
 	player.mutex.Unlock()
 }
 
-func (player *GuildPlayer) play(videoInfo *youtubedl.BasicVideoInfo) {
+func (player *GuildPlayer) play(videoInfo *BasicVideoInfo) {
 	// Update stream link
 	videoInfo.Update()
 
@@ -109,12 +124,17 @@ func (player *GuildPlayer) play(videoInfo *youtubedl.BasicVideoInfo) {
 		return
 	}
 
-	readerBuffered := bufio.NewReaderSize(reader, 16384)
+	msg, err := player.session.ChannelMessageSendEmbed(player.channelID, videoInfo.CreateEmbed("Now Playing", false))
 
-	player.session.ChannelMessageSend(player.channelID, "Now playing: "+videoInfo.Title)
+	if err != nil {
+		return
+	}
 
 	// Play the stream
 	{
+		// Buffered reader for ffmpeg
+		readerBuffered := bufio.NewReaderSize(reader, 16384)
+
 		// These represent 1 buffer
 		var buffer [OpusFrameSize]byte
 		pcmBuffer := util.GetInt16Representation(buffer[:])
@@ -135,8 +155,14 @@ func (player *GuildPlayer) play(videoInfo *youtubedl.BasicVideoInfo) {
 					break stream
 				}
 
-				// Multiply volume
-				audioop.Mul(pcmBuffer, float64(atomic.LoadUint32(&player.volume))/100.0)
+				// Multiply volume if it's not set to the default
+				volume := player.volume.Load()
+
+				if volume != 100 {
+					audioop.Mul(pcmBuffer, float64(volume)/100.0)
+				}
+
+				// Encode frame
 				encodedBuffer, err := encoder.Encode(pcmBuffer[:n/2], OpusSamplesPerFrame, OpusFrameSize)
 
 				if err != nil {
@@ -151,7 +177,7 @@ func (player *GuildPlayer) play(videoInfo *youtubedl.BasicVideoInfo) {
 		player.voiceConnection.Speaking(false)
 	}
 
-	player.session.ChannelMessageSend(player.channelID, "Finished playing: "+videoInfo.Title)
+	player.session.ChannelMessageDelete(player.channelID, msg.ID)
 }
 
 func (player *GuildPlayer) IsConnected() bool {
@@ -221,7 +247,7 @@ func (player *GuildPlayer) GetQueue() ([]string, error) {
 	return queueSlice, nil
 }
 
-func (player *GuildPlayer) AddToQueue(search string) (*youtubedl.BasicVideoInfo, error) {
+func (player *GuildPlayer) AddToQueue(requestor *discordgo.Member, search string) (*BasicVideoInfo, error) {
 	player.mutex.Lock()
 	defer player.mutex.Unlock()
 
@@ -229,10 +255,21 @@ func (player *GuildPlayer) AddToQueue(search string) (*youtubedl.BasicVideoInfo,
 		return nil, errors.New("Can't add videos to the queue, as the bot is not connected to a voice channel")
 	}
 
-	videoInfo, err := youtubedl.GetVideoInfo(search)
+	rawInfo, err := youtubedl.GetVideoInfo(search)
 
 	if err != nil {
 		return nil, err
+	}
+
+	videoInfo := &BasicVideoInfo{
+		Title:        rawInfo.Title,
+		Requestor:    requestor.User.Username,
+		Uploader:     rawInfo.Uploader,
+		Url:          rawInfo.WebpageURL,
+		RequestorUrl: requestor.AvatarURL(""),
+		ThumbnailUrl: rawInfo.Thumbnail,
+		ChannelUrl:   rawInfo.ChannelUrl,
+		Duration:     rawInfo.Duration,
 	}
 
 	player.queue.PushBack(videoInfo)
@@ -250,6 +287,10 @@ func (player *GuildPlayer) SkipQueue(num int) (int, error) {
 
 	if player.queue.Len() == 0 {
 		return 0, errors.New("Can't skip queued videos, as there are none")
+	}
+
+	if player.replayModeActive.Load() {
+		return 0, errors.New("Can't skip videos when replay move is active")
 	}
 
 	player.skip <- true
@@ -270,20 +311,89 @@ func (player *GuildPlayer) SkipQueue(num int) (int, error) {
 	return numSkipped, nil
 }
 
+func (player *GuildPlayer) ToggleReplayMode() bool {
+	replayActive := !player.replayModeActive.Load()
+	player.replayModeActive.Store(replayActive)
+	return replayActive
+}
+
 func (player *GuildPlayer) SetVolume(percentage uint32) {
-	atomic.StoreUint32(&player.volume, percentage)
+	player.volume.Store(percentage)
 }
 
 func GetGuildPlayer(guildID string) *GuildPlayer {
 	player, ok := allGuildPlayers[guildID]
 
 	if !ok {
+		volume := atomic.Uint32{}
+		volume.Store(100)
+
 		player = &GuildPlayer{
-			GuildID: guildID,
-			volume:  100,
+			GuildID:          guildID,
+			volume:           volume,
+			replayModeActive: atomic.Bool{},
 		}
 		allGuildPlayers[guildID] = player
 	}
 
 	return player
+}
+
+func (videoInfo *BasicVideoInfo) Update() {
+	videoInfo.StreamingUrl, _ = youtubedl.FetchYoutubeVideoStreamingUrl(videoInfo.Url)
+}
+
+func (videoInfo *BasicVideoInfo) CreateEmbed(title string, simple bool) *discordgo.MessageEmbed {
+	// Format duration
+	hours := int(videoInfo.Duration / 3600)
+	minutes := int(videoInfo.Duration/60) % 60
+	seconds := int(videoInfo.Duration) % 60
+
+	// Build duration string
+	var strBuilder strings.Builder
+
+	if hours > 0 {
+		strBuilder.WriteString(fmt.Sprintf("%d Hours, ", hours))
+	}
+	if minutes > 0 {
+		strBuilder.WriteString(fmt.Sprintf("%d Minutes, ", minutes))
+	}
+	strBuilder.WriteString(fmt.Sprintf("%d Seconds", seconds))
+
+	var fields []*discordgo.MessageEmbedField
+	var footer *discordgo.MessageEmbedFooter
+
+	if !simple {
+		fields = []*discordgo.MessageEmbedField{
+			{
+				Name:  "By",
+				Value: videoInfo.Uploader,
+			},
+			{
+				Name:  "Length",
+				Value: strBuilder.String(),
+			},
+		}
+		footer = &discordgo.MessageEmbedFooter{
+			Text:    videoInfo.Requestor,
+			IconURL: videoInfo.RequestorUrl,
+		}
+	}
+
+	// Return embedded message
+	return &discordgo.MessageEmbed{
+		Author: &discordgo.MessageEmbedAuthor{
+			Name:    title,
+			IconURL: "https://media.tenor.com/_kZaMRfSLG8AAAAM/felipefeffo-pepodance-pepodance.gif",
+		},
+		Title: videoInfo.Title,
+		URL:   videoInfo.Url,
+		Thumbnail: &discordgo.MessageEmbedThumbnail{
+			URL: videoInfo.ThumbnailUrl,
+		},
+		Fields: fields,
+		Footer: footer,
+		// WHITE WHITE WHITE
+		Color: 16777215,
+	}
 }

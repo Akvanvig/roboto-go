@@ -77,7 +77,7 @@ func init() {
 		},
 		{
 			State: CommandBase{
-				Name:        "letsplay",
+				Name:        "gamewithme",
 				Description: "Let's play a game",
 			},
 			Handler:            onLetsPlay,

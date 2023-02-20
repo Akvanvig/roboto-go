@@ -95,14 +95,35 @@ func onPlay(cmd *Command, event *Event) {
 	}
 
 	go func() {
-		videoInfo, err := player.AddToQueue(search)
+		videoInfo, err := player.AddToQueue(event.Data.Member, search)
 
 		if err != nil {
 			event.RespondUpdateMsg(err.Error())
 			return
 		}
 
-		event.RespondUpdateMsg("Congratulations! You added a video to the queue: " + videoInfo.Title)
+		event.RespondUpdate(&ResponseDataUpdate{
+			Embeds: &[]*discordgo.MessageEmbed{
+				videoInfo.CreateEmbed("Added to Queue", true),
+			},
+		})
+	}()
+}
+
+func onReplay(cmd *Command, event *Event) {
+	event.RespondLater()
+
+	guildID := event.Data.Interaction.GuildID
+	player := music.GetGuildPlayer(guildID)
+
+	go func() {
+		active := player.ToggleReplayMode()
+
+		if active {
+			event.RespondUpdateMsg("Replay mode is now enabled. Rock'n'Roll baby!")
+		} else {
+			event.RespondUpdateMsg("Replay mode is now disabled. At ease soldier!")
+		}
 	}()
 }
 
@@ -126,7 +147,7 @@ func onSkip(cmd *Command, event *Event) {
 			return
 		}
 
-		event.RespondUpdateMsg(fmt.Sprintf("Skipped the given number of videos: %d", n))
+		event.RespondUpdateMsg(fmt.Sprintf("Skipped '%d' videos", n))
 	}()
 }
 
@@ -161,7 +182,7 @@ func onSetVolume(cmd *Command, event *Event) {
 
 	go func() {
 		player.SetVolume(volume)
-		event.RespondUpdateMsg(fmt.Sprintf("Player volume set to '%d'", volume))
+		event.RespondUpdateMsg(fmt.Sprintf("Player volume set to '%d%%'", volume))
 	}()
 }
 
@@ -208,6 +229,13 @@ func init() {
 				},
 			},
 			Handler: onPlay,
+		},
+		{
+			State: CommandBase{
+				Name:        "replay",
+				Description: "Toggle replay mode",
+			},
+			Handler: onReplay,
 		},
 		{
 			State: CommandBase{
