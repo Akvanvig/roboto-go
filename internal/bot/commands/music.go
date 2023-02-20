@@ -110,23 +110,6 @@ func onPlay(cmd *Command, event *Event) {
 	}()
 }
 
-func onReplay(cmd *Command, event *Event) {
-	event.RespondLater()
-
-	guildID := event.Data.Interaction.GuildID
-	player := music.GetGuildPlayer(guildID)
-
-	go func() {
-		active := player.ToggleReplayMode()
-
-		if active {
-			event.RespondUpdateMsg("Replay mode is now enabled. Rock'n'Roll baby!")
-		} else {
-			event.RespondUpdateMsg("Replay mode is now disabled. At ease soldier!")
-		}
-	}()
-}
-
 func onSkip(cmd *Command, event *Event) {
 	event.RespondLater()
 
@@ -173,23 +156,41 @@ func onQueue(cmd *Command, event *Event) {
 	}()
 }
 
+func onReplay(cmd *Command, event *Event) {
+	event.RespondLater()
+
+	guildID := event.Data.Interaction.GuildID
+	player := music.GetGuildPlayer(guildID)
+
+	{
+		active := player.ToggleReplayMode()
+
+		if active {
+			event.RespondUpdateMsg("Replay mode is now enabled. Rock'n'Roll baby!")
+		} else {
+			event.RespondUpdateMsg("Replay mode is now disabled. At ease soldier!")
+		}
+	}
+}
+
 func onSetVolume(cmd *Command, event *Event) {
 	event.RespondLater()
 
 	guildID := event.Data.Interaction.GuildID
 	player := music.GetGuildPlayer(guildID)
-	volume := uint32(event.Data.Interaction.ApplicationCommandData().Options[0].IntValue())
 
-	go func() {
+	{
+		volume := uint32(event.Data.Interaction.ApplicationCommandData().Options[0].IntValue())
 		player.SetVolume(volume)
+
 		event.RespondUpdateMsg(fmt.Sprintf("Player volume set to '%d%%'", volume))
-	}()
+	}
 }
 
 func init() {
 	var (
 		minVolume = 0.0
-		maxVolume = 300.0
+		maxVolume = 200.0
 	)
 
 	musicCommands := []Command{

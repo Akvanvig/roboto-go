@@ -50,6 +50,7 @@ type GuildPlayer struct {
 type BasicVideoInfo struct {
 	Title        string
 	Requestor    string
+	RequestedAt  string
 	Uploader     string
 	Url          string
 	RequestorUrl string
@@ -264,6 +265,7 @@ func (player *GuildPlayer) AddToQueue(requestor *discordgo.Member, search string
 	videoInfo := &BasicVideoInfo{
 		Title:        rawInfo.Title,
 		Requestor:    requestor.User.Username,
+		RequestedAt:  time.Now().Format(time.RFC3339),
 		Uploader:     rawInfo.Uploader,
 		Url:          rawInfo.WebpageURL,
 		RequestorUrl: requestor.AvatarURL(""),
@@ -344,26 +346,31 @@ func (videoInfo *BasicVideoInfo) Update() {
 }
 
 func (videoInfo *BasicVideoInfo) CreateEmbed(title string, simple bool) *discordgo.MessageEmbed {
-	// Format duration
-	hours := int(videoInfo.Duration / 3600)
-	minutes := int(videoInfo.Duration/60) % 60
-	seconds := int(videoInfo.Duration) % 60
-
-	// Build duration string
 	var strBuilder strings.Builder
 
-	if hours > 0 {
-		strBuilder.WriteString(fmt.Sprintf("%d Hours, ", hours))
-	}
-	if minutes > 0 {
-		strBuilder.WriteString(fmt.Sprintf("%d Minutes, ", minutes))
-	}
-	strBuilder.WriteString(fmt.Sprintf("%d Seconds", seconds))
+	{
+		// Format duration
+		hours := int(videoInfo.Duration / 3600)
+		minutes := int(videoInfo.Duration/60) % 60
+		seconds := int(videoInfo.Duration) % 60
 
+		if hours > 0 {
+			strBuilder.WriteString(fmt.Sprintf("%d Hours, ", hours))
+		}
+		if minutes > 0 {
+			strBuilder.WriteString(fmt.Sprintf("%d Minutes, ", minutes))
+		}
+		strBuilder.WriteString(fmt.Sprintf("%d Seconds", seconds))
+	}
+
+	var timestamp string
+	var iconUrl string
 	var fields []*discordgo.MessageEmbedField
 	var footer *discordgo.MessageEmbedFooter
 
 	if !simple {
+		timestamp = videoInfo.RequestedAt
+		iconUrl = "https://media.tenor.com/V0PyK4xovxAAAAAC/peepo-dance-pepe.gif"
 		fields = []*discordgo.MessageEmbedField{
 			{
 				Name:  "By",
@@ -384,15 +391,16 @@ func (videoInfo *BasicVideoInfo) CreateEmbed(title string, simple bool) *discord
 	return &discordgo.MessageEmbed{
 		Author: &discordgo.MessageEmbedAuthor{
 			Name:    title,
-			IconURL: "https://media.tenor.com/_kZaMRfSLG8AAAAM/felipefeffo-pepodance-pepodance.gif",
+			IconURL: iconUrl,
 		},
 		Title: videoInfo.Title,
 		URL:   videoInfo.Url,
 		Thumbnail: &discordgo.MessageEmbedThumbnail{
 			URL: videoInfo.ThumbnailUrl,
 		},
-		Fields: fields,
-		Footer: footer,
+		Fields:    fields,
+		Footer:    footer,
+		Timestamp: timestamp,
 		// WHITE WHITE WHITE
 		Color: 16777215,
 	}

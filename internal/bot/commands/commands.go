@@ -37,7 +37,6 @@ type (
 		Handler            func(cmd *Command, event *Event)                    // Required
 		HandlerModalSubmit func(cmd *Command, event *Event, identifier string) // Optional
 		Check              func(cmd *Command, event *Event) error              // Optional
-		Registered         bool                                                // Not set
 	}
 )
 
@@ -144,38 +143,58 @@ func addCommandsAdvanced(commands []Command, permissions int64, check func(cmd *
 	}
 }
 
-func Create(s *discordgo.Session) {
-	log.Info().Msg("Creating commands")
+func Sync(s *discordgo.Session) error {
+	log.Info().Msg("Synchronizing commands")
 
-	for cmdName, cmd := range allCommands {
-		updatedState, err := s.ApplicationCommandCreate(s.State.User.ID, "", &cmd.State)
-
-		if err != nil {
-			log.Error().Str("message", "Could not create '"+cmdName+"' command").Err(err).Send()
-		}
-
-		// Update command state
-		cmd.State = *updatedState
-		cmd.Registered = true
-	}
-}
-
-func Delete(s *discordgo.Session) {
-	log.Info().Msg("Deleting commands")
-
-	for cmdName, cmd := range allCommands {
-		if !cmd.Registered {
-			continue
-		}
-
-		err := s.ApplicationCommandDelete(s.State.User.ID, "", cmd.State.ID)
+	{
+		// Fetch existing commands
+		existingCommands, err := s.ApplicationCommands(s.State.User.ID, "")
 
 		if err != nil {
-			log.Error().Str("message", "Failed to delete '"+cmdName+"' command: ").Err(err).Send()
+			log.Error().Str("message", "Failed to fetch existing commands").Err(err).Send()
+			return err
 		}
 
-		cmd.Registered = false
+		// Delete commands out of sync
+		for _, cmd := range existingCommands {
+			if _, ok := allCommands[cmd.Name]; !ok {
+				continue
+			}
+
+			err := s.ApplicationCommandDelete(s.State.User.ID, "", cmd.ID)
+
+			if err != nil {
+				log.Error().Str("message", "Failed to delete existing command: ").Err(err).Send()
+				return err
+			}
+		}
 	}
+
+	{
+		// Bulk creation of commands
+		newCommands := make([]*discordgo.ApplicationCommand, 0, len(allCommands))
+		for name := range allCommands {
+			cmd := allCommands[name].State
+			newCommands = append(newCommands, &cmd)
+		}
+
+		createdCommands, err := s.ApplicationCommandBulkOverwrite(s.State.User.ID, "", newCommands)
+
+		if err != nil {
+			log.Error().Str("message", "Failed to create commands").Err(err).Send()
+			return err
+		}
+
+		// Update local state
+		for _, cmd := range createdCommands {
+			cmdLocal := allCommands[cmd.Name]
+			cmdLocal.State = *cmd
+		}
+	}
+
+	log.Info().Msg("Finished synchronizing commands")
+
+	return nil
 }
 
 func Process(s *discordgo.Session, i *discordgo.InteractionCreate) {

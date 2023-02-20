@@ -60,17 +60,19 @@ func Start(token *string) {
 		log.Fatal().Str("message", "Cannot open a session").Err(err).Send()
 	}
 
-	commands.Create(session)
+	err = commands.Sync(session)
 
-	log.Info().Msg("Finished creating commands, bot is ready")
+	if err != nil {
+		log.Fatal().Msg("Failed synchronization step")
+	}
+
+	log.Info().Msg("Bot is ready")
 }
 
 func Stop() {
 	log.Info().Msg("Stopping the bot")
 
 	if session != nil {
-		commands.Delete(session)
-
 		err := session.Close()
 
 		if err != nil {
