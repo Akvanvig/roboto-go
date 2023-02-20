@@ -25,6 +25,7 @@ FROM alpine:3
 
 RUN apk add --no-cache ffmpeg
 USER nobody:nogroup
+WORKDIR  /bot/
 
 COPY --from=roboto-builder /out/roboto /bot/roboto
 COPY --from=roboto-downloader /out/yt-dlp /bot/yt-dlp
