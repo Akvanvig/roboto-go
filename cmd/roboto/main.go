@@ -13,13 +13,13 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Arguments
-var (
-	dev   = flag.Bool("dev", false, "Enable dev mode")
-	token = flag.String("token", "", "Bot access token")
-)
-
 func main() {
+	// Arguments
+	var (
+		dev   = flag.Bool("dev", false, "Enable dev mode")
+		token = flag.String("token", "", "Bot access token")
+	)
+
 	// Setup
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	flag.Parse()
