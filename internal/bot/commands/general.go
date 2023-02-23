@@ -68,7 +68,7 @@ func onGameWithMeSubmit(cmd *Command, event *Event, identifier string) {
 }
 
 func init() {
-	createCommands([]Command{
+	createChatCommands([]Command{
 		{
 			Name:        "catjam",
 			Description: "Let's jam!",

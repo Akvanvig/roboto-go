@@ -193,7 +193,7 @@ func init() {
 		maxVolume = 200.0
 	)
 
-	createCommands([]Command{
+	createChatCommands([]Command{
 		{
 			Name:        "connect",
 			Description: "Connect the bot to a voice channel",

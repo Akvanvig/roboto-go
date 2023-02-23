@@ -80,7 +80,7 @@ type CommandOption struct {
     DMPermission             *bool  `json:"dm_permission,omitempty"`
     NSFW                     *bool  `json:"nsfw,omitempty"`
 */
-func createCommands(commands []Command) {
+func createChatCommands(commands []Command) {
 	callerFuncName := util.GetCallingFuncFileName()
 
 	// Define recursive parsing function
@@ -150,6 +150,11 @@ func createCommands(commands []Command) {
 }
 
 // ToDo(Fredrico):
+// Define two more functions:
+// createUserCommands
+// createMessageCommands
+
+// ToDo(Fredrico):
 // Rename the function and perhaps try to make it have more sensible parameters
 func parseRawCommandInteractionData(data *discordgo.ApplicationCommandInteractionData) (string, []*discordgo.ApplicationCommandInteractionDataOption) {
 	var builder strings.Builder
@@ -179,7 +184,7 @@ func (event *Event) Respond(response *Response) error {
 	err := event.Session.InteractionRespond(event.Data.Interaction, response)
 
 	if err != nil {
-		log.Error().Str("message", "Failed to send a response to discord").Err(err).Send()
+		log.Error().Err(err).Msg("Failed to send a response to discord")
 	}
 
 	return err
@@ -191,11 +196,23 @@ func (event *Event) RespondLater() error {
 	})
 }
 
-func (event *Event) RespondMsg(msg string) error {
+func (event *Event) RespondMsg(msg string, flags ...discordgo.MessageFlags) error {
+	var tmpFlags discordgo.MessageFlags
+
+	switch len(flags) {
+	case 0:
+		tmpFlags = 0
+	case 1:
+		tmpFlags = flags[0]
+	default:
+		log.Fatal().Msg("Function can only take up to 1 flags parameter")
+	}
+
 	return event.Respond(&Response{
 		Type: ResponseMsg,
 		Data: &ResponseData{
 			Content: msg,
+			Flags:   tmpFlags,
 		},
 	})
 }
