@@ -21,59 +21,57 @@ const (
 	ResponseModal          = discordgo.InteractionResponseModal
 )
 
+var allCommandsRaw = []*discordgo.ApplicationCommand{}
+var allCommands = map[string]Command{}
+
 type (
 	Response           = discordgo.InteractionResponse
 	ResponseData       = discordgo.InteractionResponseData
 	ResponseDataUpdate = discordgo.WebhookEdit
+	Command            = CommandOption
 )
 
-type (
-	Event struct {
-		Session    *discordgo.Session                                   // Required
-		Data       *discordgo.InteractionCreate                         // Required
-		Options    []*discordgo.ApplicationCommandInteractionDataOption // Optional
-		Components []discordgo.MessageComponent                         // Optional
-		ID         string                                               // Optional
-	}
+type Event struct {
+	Session    *discordgo.Session                                   // Required
+	Data       *discordgo.InteractionCreate                         // Required
+	Options    []*discordgo.ApplicationCommandInteractionDataOption // Optional
+	Components []discordgo.MessageComponent                         // Optional
+	ID         string                                               // Optional
+}
 
-	CommandOption struct {
-		Type                     discordgo.ApplicationCommandOptionType
-		Name                     string
-		NameLocalizations        map[discordgo.Locale]string
-		Description              string
-		DescriptionLocalizations map[discordgo.Locale]string
+type CommandOption struct {
+	Type                     discordgo.ApplicationCommandOptionType
+	Name                     string
+	NameLocalizations        map[discordgo.Locale]string
+	Description              string
+	DescriptionLocalizations map[discordgo.Locale]string
 
-		ChannelTypes []discordgo.ChannelType
-		Required     bool
-		Options      []CommandOption
+	ChannelTypes []discordgo.ChannelType
+	Required     bool
+	Options      []CommandOption
 
-		// NOTE: mutually exclusive with Choices.
-		Autocomplete bool
-		Choices      []*discordgo.ApplicationCommandOptionChoice
-		// Minimal value of number/integer option.
-		MinValue *float64
-		// Maximum value of number/integer option.
-		MaxValue float64
-		// Minimum length of string option.
-		MinLength *int
-		// Maximum length of string option.
-		MaxLength int
+	// NOTE: mutually exclusive with Choices.
+	Autocomplete bool
+	Choices      []*discordgo.ApplicationCommandOptionChoice
+	// Minimal value of number/integer option.
+	MinValue *float64
+	// Maximum value of number/integer option.
+	MaxValue float64
+	// Minimum length of string option.
+	MinLength *int
+	// Maximum length of string option.
+	MaxLength int
 
-		// Event handler
-		Handler func(cmd *Command, event *Event)
-		// Modal event handler
-		HandlerModalSubmit func(cmd *Command, event *Event, identifier string)
-		// Commmand check handler
-		Check func(cmd *Command, event *Event) error
+	// Event handler
+	Handler func(cmd *Command, event *Event)
+	// Modal event handler
+	HandlerModalSubmit func(cmd *Command, event *Event, identifier string)
+	// Commmand check handler
+	Check func(cmd *Command, event *Event) error
 
-		// Full command key
-		key string
-	}
-	Command = CommandOption
-)
-
-var allCommandsRaw = []*discordgo.ApplicationCommand{}
-var allCommands = map[string]Command{}
+	// Full command key
+	key string
+}
 
 // Note(Fredrico):
 /* Potential future parameters for addCommands

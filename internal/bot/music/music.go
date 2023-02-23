@@ -21,6 +21,10 @@ import (
 	"layeh.com/gopus"
 )
 
+// PlayerTimeoutSeconds must by divisible by PlayrLoopTickSeconds
+const PlayerLoopTickSeconds = 3
+const PlayerTimeoutSeconds = 30
+
 // Taken from https://github.com/Rapptz/discord.py/blob/master/discord/opus.py
 const OpusSamplingRate = 48000
 const OpusChannels = 2
@@ -71,9 +75,9 @@ loop:
 		select {
 		case <-timer.C:
 			if player.queue.Len() == 0 {
-				inactivityTime += time.Second * 3
+				inactivityTime += time.Second * PlayerLoopTickSeconds
 
-				if inactivityTime == (time.Second * 15) {
+				if inactivityTime == (time.Second * PlayerTimeoutSeconds) {
 					break loop
 				}
 
