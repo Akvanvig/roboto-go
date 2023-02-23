@@ -3,7 +3,6 @@
 package util
 
 import (
-	"flag"
 	"os"
 	"path/filepath"
 
@@ -14,7 +13,6 @@ import (
 
 func SetupRuntimeEnvironment() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	flag.Parse()
 
 	// Note(Fredrico):
 	// Else, set RootPath to executable path

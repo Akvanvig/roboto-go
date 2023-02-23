@@ -3,7 +3,6 @@
 package util
 
 import (
-	"flag"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -15,7 +14,6 @@ import (
 
 func SetupRuntimeEnvironment() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	flag.Parse()
 
 	// Note(Fredrico).
 	// If we are running in dev mode, we automatically set the RootPath to be the same as go.mod's directory

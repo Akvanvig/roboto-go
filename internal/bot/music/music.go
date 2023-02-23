@@ -334,7 +334,7 @@ func (videoInfo *BasicVideoInfo) Update() {
 }
 
 func (videoInfo *BasicVideoInfo) CreateEmbed(title string, simple bool) *discordgo.MessageEmbed {
-	var strBuilder strings.Builder
+	var builder strings.Builder
 
 	{
 		// Format duration
@@ -343,12 +343,12 @@ func (videoInfo *BasicVideoInfo) CreateEmbed(title string, simple bool) *discord
 		seconds := int(videoInfo.Duration) % 60
 
 		if hours > 0 {
-			strBuilder.WriteString(fmt.Sprintf("%d Hours, ", hours))
+			fmt.Fprintf(&builder, "%d Hours, ", hours)
 		}
 		if minutes > 0 {
-			strBuilder.WriteString(fmt.Sprintf("%d Minutes, ", minutes))
+			fmt.Fprintf(&builder, "%d Minutes, ", minutes)
 		}
-		strBuilder.WriteString(fmt.Sprintf("%d Seconds", seconds))
+		fmt.Fprintf(&builder, "%d Seconds", seconds)
 	}
 
 	var timestamp string
@@ -366,7 +366,7 @@ func (videoInfo *BasicVideoInfo) CreateEmbed(title string, simple bool) *discord
 			},
 			{
 				Name:  "Length",
-				Value: strBuilder.String(),
+				Value: builder.String(),
 			},
 		}
 		footer = &discordgo.MessageEmbedFooter{

@@ -13,6 +13,7 @@ import (
 func main() {
 	// Arguments
 	var token = flag.String("token", "", "Bot access token")
+	flag.Parse()
 
 	// Setup
 	util.SetupRuntimeEnvironment()

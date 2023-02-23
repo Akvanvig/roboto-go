@@ -81,4 +81,12 @@ func init() {
 			HandlerModalSubmit: onGameWithMeSubmit,
 		},
 	})
+
+	createUserContextCommands([]Command{
+		{
+			Name: "Play a game",
+			// We can reuse handlers!!
+			Handler: onGameWithMe,
+		},
+	})
 }
