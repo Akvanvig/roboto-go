@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 
@@ -15,7 +14,7 @@ func onCatJam(cmd *Command, event *Event) {
 
 	if err != nil {
 		log.Error().Err(err).Send()
-		event.RespondError(errors.New("Failed to open catjam asset"))
+		event.RespondMsg("Failed to open catjam asset")
 		return
 	}
 
@@ -37,7 +36,7 @@ func onCatJam(cmd *Command, event *Event) {
 
 // TODO(Fredrico):
 // This is unfinished
-func onLetsPlay(cmd *Command, event *Event) {
+func onGameWithMe(cmd *Command, event *Event) {
 	event.Respond(&Response{
 		Type: ResponseModal,
 		Data: &ResponseData{
@@ -64,28 +63,22 @@ func onLetsPlay(cmd *Command, event *Event) {
 	})
 }
 
-func onLetsPlaySubmit(cmd *Command, event *Event, identifier string) {
+func onGameWithMeSubmit(cmd *Command, event *Event, identifier string) {
 	event.RespondMsg("Thank you for playing! Here's your doxed user ID: " + identifier)
 }
 
 func init() {
-	generalCommands := []Command{
+	createCommands([]Command{
 		{
-			State: CommandBase{
-				Name:        "catjam",
-				Description: "Let's jam!",
-			},
-			Handler: onCatJam,
+			Name:        "catjam",
+			Description: "Let's jam!",
+			Handler:     onCatJam,
 		},
 		{
-			State: CommandBase{
-				Name:        "gamewithme",
-				Description: "Let's play a game",
-			},
-			Handler:            onLetsPlay,
-			HandlerModalSubmit: onLetsPlaySubmit,
+			Name:               "gamewithme",
+			Description:        "Let's play a game",
+			Handler:            onGameWithMe,
+			HandlerModalSubmit: onGameWithMeSubmit,
 		},
-	}
-
-	addCommands(generalCommands)
+	})
 }

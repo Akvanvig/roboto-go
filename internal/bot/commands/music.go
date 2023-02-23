@@ -21,7 +21,7 @@ func onConnect(cmd *Command, event *Event) {
 	event.RespondLater()
 
 	guildID := event.Data.Interaction.GuildID
-	voiceChannelID := event.Data.Interaction.ApplicationCommandData().Options[0].StringValue()
+	voiceChannelID := event.Options[0].StringValue()
 	var voiceChannel *discordgo.Channel
 
 	{
@@ -79,7 +79,7 @@ func onPlay(cmd *Command, event *Event) {
 	event.RespondLater()
 
 	guildID := event.Data.Interaction.GuildID
-	search := event.Data.Interaction.ApplicationCommandData().Options[0].StringValue()
+	search := event.Options[0].StringValue()
 
 	player := music.GetGuildPlayer(guildID)
 
@@ -116,8 +116,8 @@ func onSkip(cmd *Command, event *Event) {
 	guildID := event.Data.Interaction.GuildID
 	numSkip := 1
 
-	if len(event.Data.Interaction.ApplicationCommandData().Options) == 1 {
-		numSkip = int(event.Data.Interaction.ApplicationCommandData().Options[0].IntValue())
+	if len(event.Options) == 1 {
+		numSkip = int(event.Options[0].IntValue())
 	}
 
 	player := music.GetGuildPlayer(guildID)
@@ -180,7 +180,7 @@ func onSetVolume(cmd *Command, event *Event) {
 	player := music.GetGuildPlayer(guildID)
 
 	{
-		volume := uint32(event.Data.Interaction.ApplicationCommandData().Options[0].IntValue())
+		volume := uint32(event.Options[0].IntValue())
 		player.SetVolume(volume)
 
 		event.RespondUpdateMsg(fmt.Sprintf("Player volume set to '%d%%'", volume))
@@ -193,91 +193,75 @@ func init() {
 		maxVolume = 200.0
 	)
 
-	musicCommands := []Command{
+	createCommands([]Command{
 		{
-			State: CommandBase{
-				Name:        "connect",
-				Description: "Connect the bot to a voice channel",
-				Options: []*CommandOption{
-					{
-						Type:        discordgo.ApplicationCommandOptionString,
-						Name:        "channel",
-						Description: "The voice channel id",
-						Required:    true,
-					},
+			Name:        "connect",
+			Description: "Connect the bot to a voice channel",
+			Options: []CommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "channel",
+					Description: "The voice channel id",
+					Required:    true,
 				},
 			},
 			Handler: onConnect,
 		},
 		{
-			State: CommandBase{
-				Name:        "disconnect",
-				Description: "Disconnect the bot from voice",
-			},
-			Handler: onDisconnect,
+			Name:        "disconnect",
+			Description: "Disconnect the bot from voice",
+			Handler:     onDisconnect,
 		},
 		{
-			State: CommandBase{
-				Name:        "play",
-				Description: "Play a youtube video",
-				Options: []*CommandOption{
-					{
-						Type:        discordgo.ApplicationCommandOptionString,
-						Name:        "video",
-						Description: "The link of the video",
-						Required:    true,
-					},
+			Name:        "play",
+			Description: "Play a youtube video",
+			Options: []CommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "video",
+					Description: "The link of the video",
+					Required:    true,
 				},
 			},
 			Handler: onPlay,
 		},
 		{
-			State: CommandBase{
-				Name:        "replay",
-				Description: "Toggle replay mode",
-			},
-			Handler: onReplay,
+			Name:        "replay",
+			Description: "Toggle replay mode",
+			Handler:     onReplay,
 		},
 		{
-			State: CommandBase{
-				Name:        "skip",
-				Description: "Skip one or more queued videos",
-				Options: []*CommandOption{
-					{
-						Type:        discordgo.ApplicationCommandOptionInteger,
-						Name:        "number",
-						Description: "The number of videos to skip",
-						Required:    false,
-					},
+			Name:        "skip",
+			Description: "Skip one or more queued videos",
+			Options: []CommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "number",
+					Description: "The number of videos to skip",
+					Required:    false,
 				},
 			},
 			Handler: onSkip,
 		},
 		{
-			State: CommandBase{
-				Name:        "volume",
-				Description: "Set the bot volume",
-				Options: []*CommandOption{
-					{
-						Type:        discordgo.ApplicationCommandOptionInteger,
-						Name:        "number",
-						Description: "The volume percentage as an integer",
-						Required:    true,
-						MinValue:    &minVolume,
-						MaxValue:    maxVolume,
-					},
+			Name:        "volume",
+			Description: "Set the bot volume",
+			Options: []CommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "number",
+					Description: "The volume percentage as an integer",
+					Required:    true,
+					MinValue:    &minVolume,
+					MaxValue:    maxVolume,
 				},
 			},
 			Handler: onSetVolume,
 		},
 		{
-			State: CommandBase{
-				Name:        "queue",
-				Description: "Get the current queue",
-			},
-			Handler: onQueue,
+			Name:        "queue",
+			Description: "Get the current queue",
+			Handler:     onQueue,
 		},
-	}
-
-	addCommandsAdvanced(musicCommands, discordgo.PermissionSendMessages, isGuildCmd)
+	})
 }

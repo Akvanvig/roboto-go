@@ -1,13 +1,14 @@
 package commands
 
 import (
-	"errors"
+	"fmt"
+	"runtime"
 	"strings"
 
+	"github.com/Akvanvig/roboto-go/internal/util"
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
-	// Experimental official go package
 )
 
 const (
@@ -22,25 +23,159 @@ const (
 
 type (
 	Response           = discordgo.InteractionResponse
-	ResponseDataUpdate = discordgo.WebhookEdit
 	ResponseData       = discordgo.InteractionResponseData
-	CommandOption      = discordgo.ApplicationCommandOption
-
-	Event struct {
-		Session *discordgo.Session           // Required
-		Data    *discordgo.InteractionCreate // Required
-	}
-
-	CommandBase = discordgo.ApplicationCommand
-	Command     struct {
-		State              CommandBase                                         // Required
-		Handler            func(cmd *Command, event *Event)                    // Required
-		HandlerModalSubmit func(cmd *Command, event *Event, identifier string) // Optional
-		Check              func(cmd *Command, event *Event) error              // Optional
-	}
+	ResponseDataUpdate = discordgo.WebhookEdit
 )
 
+type (
+	Event struct {
+		Session    *discordgo.Session                                   // Required
+		Data       *discordgo.InteractionCreate                         // Required
+		Options    []*discordgo.ApplicationCommandInteractionDataOption // Optional
+		Components []discordgo.MessageComponent                         // Optional
+		ID         string                                               // Optional
+	}
+
+	CommandOption struct {
+		Type                     discordgo.ApplicationCommandOptionType
+		Name                     string
+		NameLocalizations        map[discordgo.Locale]string
+		Description              string
+		DescriptionLocalizations map[discordgo.Locale]string
+
+		ChannelTypes []discordgo.ChannelType
+		Required     bool
+		Options      []CommandOption
+
+		// NOTE: mutually exclusive with Choices.
+		Autocomplete bool
+		Choices      []*discordgo.ApplicationCommandOptionChoice
+		// Minimal value of number/integer option.
+		MinValue *float64
+		// Maximum value of number/integer option.
+		MaxValue float64
+		// Minimum length of string option.
+		MinLength *int
+		// Maximum length of string option.
+		MaxLength int
+
+		// Event handler
+		Handler func(cmd *Command, event *Event)
+		// Modal event handler
+		HandlerModalSubmit func(cmd *Command, event *Event, identifier string)
+		// Commmand check handler
+		Check func(cmd *Command, event *Event) error
+
+		// Full command key
+		key string
+	}
+	Command = CommandOption
+)
+
+var allCommandsRaw = []*discordgo.ApplicationCommand{}
 var allCommands = map[string]Command{}
+
+// Note(Fredrico):
+/* Potential future parameters for addCommands
+		Version           string                 `json:"version,omitempty"`
+    DefaultMemberPermissions *int64 `json:"default_member_permissions,string,omitempty"`
+    DMPermission             *bool  `json:"dm_permission,omitempty"`
+    NSFW                     *bool  `json:"nsfw,omitempty"`
+*/
+func createCommands(commands []Command) {
+	callerFuncName := util.GetCallingFuncFileName()
+
+	// Define recursive parsing function
+	var parseCommands func(parentGroupName string, commands []Command) []*discordgo.ApplicationCommandOption
+	parseCommands = func(parentGroupName string, commands []Command) []*discordgo.ApplicationCommandOption {
+		commandsLen := len(commands)
+
+		if commandsLen == 0 {
+			return nil
+		}
+
+		commandsConverted := make([]*discordgo.ApplicationCommandOption, commandsLen)
+
+		for i := 0; i < commandsLen; i++ {
+			var options []*discordgo.ApplicationCommandOption
+			cmd := &commands[i]
+
+			if cmd.Type == discordgo.ApplicationCommandOptionSubCommandGroup || cmd.Type == discordgo.ApplicationCommandOptionSubCommand {
+				var builder strings.Builder
+				builder.WriteString(parentGroupName)
+				builder.WriteString("_")
+				builder.WriteString(cmd.Name)
+				key := builder.String()
+
+				cmd.key = key
+				allCommands[key] = *cmd
+				options = parseCommands(key, cmd.Options)
+			}
+
+			commandsConverted[i] = &discordgo.ApplicationCommandOption{
+				Type:                     cmd.Type,
+				Name:                     cmd.Name,
+				Description:              cmd.Description,
+				DescriptionLocalizations: cmd.DescriptionLocalizations,
+				ChannelTypes:             cmd.ChannelTypes,
+				Required:                 cmd.Required,
+				Options:                  options,
+				Autocomplete:             cmd.Autocomplete,
+				Choices:                  cmd.Choices,
+				MinValue:                 cmd.MinValue,
+				MaxValue:                 cmd.MaxValue,
+				MinLength:                cmd.MinLength,
+				MaxLength:                cmd.MaxLength,
+			}
+		}
+
+		return commandsConverted
+	}
+
+	// Override topmost type if it's not set to ApplicationCommandOptionSubCommandGroup
+	for i := 0; i < len(commands); i++ {
+		if commands[i].Type != discordgo.ApplicationCommandOptionSubCommandGroup {
+			commands[i].Type = discordgo.ApplicationCommandOptionSubCommand
+		}
+	}
+
+	name := callerFuncName
+	description := fmt.Sprintf("Commands belonging to the %s category", callerFuncName)
+	createdCommands := parseCommands(callerFuncName, commands)
+
+	// Append createdCommands to temporary init commands list
+	allCommandsRaw = append(allCommandsRaw, &discordgo.ApplicationCommand{
+		Name:        name,
+		Description: description,
+		Options:     createdCommands,
+	})
+}
+
+// ToDo(Fredrico):
+// Rename the function and perhaps try to make it have more sensible parameters
+func parseRawCommandInteractionData(data *discordgo.ApplicationCommandInteractionData) (string, []*discordgo.ApplicationCommandInteractionDataOption) {
+	var builder strings.Builder
+	builder.WriteString(data.Name)
+
+	options := data.Options
+	for {
+		if len(options) == 0 {
+			break
+		}
+
+		option := options[0]
+
+		if option.Type != discordgo.ApplicationCommandOptionSubCommandGroup && option.Type != discordgo.ApplicationCommandOptionSubCommand {
+			break
+		} else {
+			builder.WriteString(fmt.Sprintf("_%s", options[0].Name))
+		}
+
+		options = option.Options
+	}
+
+	return builder.String(), options
+}
 
 func (event *Event) Respond(response *Response) error {
 	err := event.Session.InteractionRespond(event.Data.Interaction, response)
@@ -58,6 +193,15 @@ func (event *Event) RespondLater() error {
 	})
 }
 
+func (event *Event) RespondMsg(msg string) error {
+	return event.Respond(&Response{
+		Type: ResponseMsg,
+		Data: &ResponseData{
+			Content: msg,
+		},
+	})
+}
+
 func (event *Event) RespondUpdate(responseDataUpdate *ResponseDataUpdate) error {
 	_, err := event.Session.InteractionResponseEdit(event.Data.Interaction, responseDataUpdate)
 	return err
@@ -69,79 +213,27 @@ func (event *Event) RespondUpdateMsg(msg string) error {
 	})
 }
 
-func (event *Event) RespondUpdateError(err error) error {
-	var fullUserName string
+func (event *Event) RespondUpdateMsgLog(msg string) error {
+	var userNameFull string
 	uuid := uuid.New().String()
 
 	if event.Data.Member != nil {
-		fullUserName = event.Data.Interaction.Member.User.Username + "#" + event.Data.Member.User.Discriminator
+		userNameFull = event.Data.Interaction.Member.User.Username + "#" + event.Data.Member.User.Discriminator
 
 	} else {
-		fullUserName = event.Data.Interaction.User.Username + "#" + event.Data.Interaction.User.Discriminator
+		userNameFull = event.Data.Interaction.User.Username + "#" + event.Data.Interaction.User.Discriminator
 	}
 
-	log.Error().Str("message", "Updated a response with an error to a user interaction").Str("username", fullUserName).Str("uuid", uuid).Err(err).Send()
+	log.Error().Str("username", userNameFull).Str("uuid", uuid).Msg(msg)
 
-	errMsg := err.Error() + ", Error ID: " + uuid
-
-	return event.RespondUpdate(&ResponseDataUpdate{
-		Content: &errMsg,
-	})
-}
-
-func (event *Event) RespondMsg(msg string) error {
-	return event.Respond(&Response{
-		Type: ResponseMsg,
-		Data: &ResponseData{
-			Content: msg,
-		},
-	})
-}
-
-func (event *Event) RespondError(err error) error {
-	var fullUserName string
-	uuid := uuid.New().String()
-
-	if event.Data.Member != nil {
-		fullUserName = event.Data.Interaction.Member.User.Username + "#" + event.Data.Member.User.Discriminator
-
-	} else {
-		fullUserName = event.Data.Interaction.User.Username + "#" + event.Data.Interaction.User.Discriminator
-	}
-
-	log.Error().Str("message", "Responded with an error to a user interaction").Str("username", fullUserName).Str("uuid", uuid).Err(err).Send()
-
-	return event.Respond(&Response{
-		Type: ResponseMsg,
-		Data: &ResponseData{
-			Content: err.Error() + ", Error ID: " + uuid,
-		},
-	})
+	return event.RespondUpdateMsg(msg)
 }
 
 func (command *Command) GenerateModalID(userData string) string {
 	if userData != "" {
-		return command.State.Name + "_" + userData
-	}
-
-	return command.State.Name
-}
-
-func addCommands(commands []Command) {
-	for _, cmd := range commands {
-		allCommands[cmd.State.Name] = cmd
-	}
-}
-
-func addCommandsAdvanced(commands []Command, permissions int64, check func(cmd *Command, event *Event) error) {
-	for _, cmd := range commands {
-		// Note(Fredrico):
-		// Currently the member permission feature seems to be a little bork
-		// See https://github.com/bwmarrin/discordgo/blob/v0.26.1/structs.go#L1988 for permissions
-		//cmd.State.DefaultMemberPermissions = &permissions
-		cmd.Check = check
-
-		allCommands[cmd.State.Name] = cmd
+		return command.key + "|" + userData
+	} else {
+		return command.key
 	}
 }
 
@@ -150,23 +242,32 @@ func Sync(s *discordgo.Session) error {
 
 	{
 		// Fetch existing commands
-		existingCommands, err := s.ApplicationCommands(s.State.User.ID, "")
+		commandsExisting, err := s.ApplicationCommands(s.State.User.ID, "")
 
 		if err != nil {
-			log.Error().Str("message", "Failed to fetch existing commands").Err(err).Send()
+			log.Error().Err(err).Msg("Failed to fetch existing commands")
 			return err
 		}
 
 		// Delete commands out of sync
-		for _, cmd := range existingCommands {
-			if _, ok := allCommands[cmd.Name]; !ok {
+		for _, cmd := range commandsExisting {
+			deleteCommand := true
+
+			for _, cmdTmp := range allCommandsRaw {
+				if cmd.Name == cmdTmp.Name {
+					deleteCommand = false
+					break
+				}
+			}
+
+			if !deleteCommand {
 				continue
 			}
 
-			err := s.ApplicationCommandDelete(s.State.User.ID, "", cmd.ID)
+			err = s.ApplicationCommandDelete(s.State.User.ID, "", cmd.ID)
 
 			if err != nil {
-				log.Error().Str("message", "Failed to delete existing command: ").Err(err).Send()
+				log.Error().Msg("Failed to delete an out of sync command")
 				return err
 			}
 		}
@@ -174,24 +275,30 @@ func Sync(s *discordgo.Session) error {
 
 	{
 		// Bulk creation of commands
-		newCommands := make([]*discordgo.ApplicationCommand, 0, len(allCommands))
-		for name := range allCommands {
-			cmd := allCommands[name].State
-			newCommands = append(newCommands, &cmd)
-		}
-
-		createdCommands, err := s.ApplicationCommandBulkOverwrite(s.State.User.ID, "", newCommands)
+		_, err := s.ApplicationCommandBulkOverwrite(s.State.User.ID, "", allCommandsRaw)
 
 		if err != nil {
-			log.Error().Str("message", "Failed to create commands").Err(err).Send()
+			log.Fatal().Err(err).Msg("Failed to create commands")
 			return err
 		}
 
-		// Update local state
-		for _, cmd := range createdCommands {
-			cmdLocal := allCommands[cmd.Name]
-			cmdLocal.State = *cmd
-		}
+		allCommandsRaw = nil
+	}
+
+	{
+		// Cleanup of init alloc data
+		log.Info().Msg("Cleaning up temporary init data")
+
+		var m runtime.MemStats
+		runtime.ReadMemStats(&m)
+		bytesBefore := m.Alloc
+
+		runtime.GC()
+
+		runtime.ReadMemStats(&m)
+		bytesAfter := m.Alloc
+
+		log.Info().Uint64("bytes", bytesBefore-bytesAfter).Msg("Finished cleaning up temporary init data")
 	}
 
 	log.Info().Msg("Finished synchronizing commands")
@@ -208,39 +315,47 @@ func Process(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	switch event.Data.Interaction.Type {
 	case discordgo.InteractionApplicationCommand:
-		cmd, ok := allCommands[event.Data.ApplicationCommandData().Name]
+		data := event.Data.ApplicationCommandData()
+		cmdKey, cmdOptions := parseRawCommandInteractionData(&data)
 
+		cmd, ok := allCommands[cmdKey]
 		if !ok {
 			break
 		}
+
+		event.Options = cmdOptions
 
 		if cmd.Check != nil {
 			err = cmd.Check(&cmd, &event)
+			if err != nil {
+				break
+			}
 		}
 
-		if err != nil {
-			event.RespondError(err)
-		} else {
-			cmd.Handler(&cmd, &event)
-		}
+		cmd.Handler(&cmd, &event)
 
 		return
 	case discordgo.InteractionModalSubmit:
-		modalData := strings.SplitN(event.Data.ModalSubmitData().CustomID, "_", 2)
-		cmd, ok := allCommands[modalData[0]]
+		data := event.Data.ModalSubmitData()
+		tmp := strings.SplitN(data.CustomID, "|", 2)
+		cmdKey := tmp[0]
 
+		cmd, ok := allCommands[cmdKey]
 		if !ok {
 			break
 		}
 
-		if len(modalData) > 1 {
-			cmd.HandlerModalSubmit(&cmd, &event, modalData[1])
-		} else {
-			cmd.HandlerModalSubmit(&cmd, &event, "")
+		event.Components = data.Components
+
+		var id string
+		if len(tmp) > 1 {
+			id = tmp[1]
 		}
+
+		cmd.HandlerModalSubmit(&cmd, &event, id)
 
 		return
 	}
 
-	event.RespondError(errors.New("An internal error occured"))
+	event.RespondMsg("An internal error occured")
 }
