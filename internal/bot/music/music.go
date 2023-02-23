@@ -21,7 +21,9 @@ import (
 	"layeh.com/gopus"
 )
 
-// PlayerTimeoutSeconds must by divisible by PlayrLoopTickSeconds
+const PlayerDefaultVolume = 50
+
+// PlayerTimeoutSeconds must by divisible by PlayerLoopTickSeconds
 const PlayerLoopTickSeconds = 3
 const PlayerTimeoutSeconds = 30
 
@@ -327,24 +329,6 @@ func (player *GuildPlayer) SetVolume(percentage uint32) {
 	player.volume.Store(percentage)
 }
 
-func GetGuildPlayer(guildID string) *GuildPlayer {
-	player, ok := allGuildPlayers[guildID]
-
-	if !ok {
-		volume := atomic.Uint32{}
-		volume.Store(100)
-
-		player = &GuildPlayer{
-			GuildID:          guildID,
-			volume:           volume,
-			replayModeActive: atomic.Bool{},
-		}
-		allGuildPlayers[guildID] = player
-	}
-
-	return player
-}
-
 func (videoInfo *BasicVideoInfo) Update() {
 	videoInfo.StreamingUrl, _ = youtubedl.FetchYoutubeVideoStreamingUrl(videoInfo.Url)
 }
@@ -408,4 +392,22 @@ func (videoInfo *BasicVideoInfo) CreateEmbed(title string, simple bool) *discord
 		// WHITE WHITE WHITE
 		Color: 16777215,
 	}
+}
+
+func GetGuildPlayer(guildID string) *GuildPlayer {
+	player, ok := allGuildPlayers[guildID]
+
+	if !ok {
+		volume := atomic.Uint32{}
+		volume.Store(PlayerDefaultVolume)
+
+		player = &GuildPlayer{
+			GuildID:          guildID,
+			volume:           volume,
+			replayModeActive: atomic.Bool{},
+		}
+		allGuildPlayers[guildID] = player
+	}
+
+	return player
 }
