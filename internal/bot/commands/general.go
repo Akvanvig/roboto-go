@@ -9,6 +9,31 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+func init() {
+	createChatCommands([]Command{
+		{
+			Name:        "catjam",
+			Description: "Let's jam!",
+			Handler:     onCatJam,
+		},
+		{
+			Name:               "gamewithme",
+			Description:        "Let's play a game",
+			Handler:            onGameWithMe,
+			HandlerModalSubmit: onGameWithMeSubmit,
+		},
+	})
+
+	createUserContextCommands([]Command{
+		{
+			Name: "Play a game",
+			// We can reuse handlers!!
+			Handler:            onGameWithMe,
+			HandlerModalSubmit: onGameWithMeSubmit,
+		},
+	})
+}
+
 func onCatJam(cmd *Command, event *Event) {
 	file, err := os.Open(filepath.Join(globals.RootPath, "assets/img/catjam.gif"))
 
@@ -65,28 +90,4 @@ func onGameWithMe(cmd *Command, event *Event) {
 
 func onGameWithMeSubmit(cmd *Command, event *Event, identifier string) {
 	event.RespondMsg("Thank you for playing! Here's your doxed user ID: " + identifier)
-}
-
-func init() {
-	createChatCommands([]Command{
-		{
-			Name:        "catjam",
-			Description: "Let's jam!",
-			Handler:     onCatJam,
-		},
-		{
-			Name:               "gamewithme",
-			Description:        "Let's play a game",
-			Handler:            onGameWithMe,
-			HandlerModalSubmit: onGameWithMeSubmit,
-		},
-	})
-
-	createUserContextCommands([]Command{
-		{
-			Name: "Play a game",
-			// We can reuse handlers!!
-			Handler: onGameWithMe,
-		},
-	})
 }

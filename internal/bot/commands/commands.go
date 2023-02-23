@@ -134,7 +134,7 @@ func createChatCommands(commands []Command) {
 		if commands[i].Type != discordgo.ApplicationCommandOptionSubCommandGroup {
 			if commands[i].Type != 0 {
 				fmt.Fprintf(&builder,
-					"Chat command type always has to be 'ApplicationCommandOptionSubCommandGroup' at the top level. Forcefully correcting type on command '%s' in the '%s' category",
+					"Chat command type always has to be 'ApplicationCommandOptionSubCommandGroup' or 'ApplicationCommandOptionSubCommand' at the top level. Forcefully correcting type on command '%s' in the '%s' category",
 					commands[i].Name, callerFuncName)
 
 				log.Warn().Msg(builder.String())
@@ -186,7 +186,7 @@ func createUserContextCommands(commands []Command) {
 
 		if commands[i].Options != nil {
 			fmt.Fprintf(&builder,
-				"User context command can't contain option array. Ignoring set value on command '%s' in the '%s' category",
+				"User context command can't contain options array. Ignoring set value on command '%s' in the '%s' category",
 				commands[i].Name, callerFuncName)
 
 			log.Warn().Msg(builder.String())

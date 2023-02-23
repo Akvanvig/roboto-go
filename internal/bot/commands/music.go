@@ -9,6 +9,85 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+func init() {
+	var (
+		minVolume = 0.0
+		maxVolume = 200.0
+	)
+
+	createChatCommands([]Command{
+		{
+			Name:        "connect",
+			Description: "Connect the bot to a voice channel",
+			Options: []CommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "channel",
+					Description: "The voice channel id",
+					Required:    true,
+				},
+			},
+			Handler: onConnect,
+		},
+		{
+			Name:        "disconnect",
+			Description: "Disconnect the bot from voice",
+			Handler:     onDisconnect,
+		},
+		{
+			Name:        "play",
+			Description: "Play a youtube video",
+			Options: []CommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "video",
+					Description: "The link of the video",
+					Required:    true,
+				},
+			},
+			Handler: onPlay,
+		},
+		{
+			Name:        "replay",
+			Description: "Toggle replay mode",
+			Handler:     onReplay,
+		},
+		{
+			Name:        "skip",
+			Description: "Skip one or more queued videos",
+			Options: []CommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "number",
+					Description: "The number of videos to skip",
+					Required:    false,
+				},
+			},
+			Handler: onSkip,
+		},
+		{
+			Name:        "volume",
+			Description: "Set the bot volume",
+			Options: []CommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "number",
+					Description: "The volume percentage as an integer",
+					Required:    true,
+					MinValue:    &minVolume,
+					MaxValue:    maxVolume,
+				},
+			},
+			Handler: onSetVolume,
+		},
+		{
+			Name:        "queue",
+			Description: "Get the current queue",
+			Handler:     onQueue,
+		},
+	})
+}
+
 func isGuildCmd(cmd *Command, event *Event) error {
 	if event.Data.Interaction.Member == nil {
 		return errors.New("You can not play a song in a DM")
@@ -185,83 +264,4 @@ func onSetVolume(cmd *Command, event *Event) {
 
 		event.RespondUpdateMsg(fmt.Sprintf("Player volume set to '%d%%'", volume))
 	}
-}
-
-func init() {
-	var (
-		minVolume = 0.0
-		maxVolume = 200.0
-	)
-
-	createChatCommands([]Command{
-		{
-			Name:        "connect",
-			Description: "Connect the bot to a voice channel",
-			Options: []CommandOption{
-				{
-					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "channel",
-					Description: "The voice channel id",
-					Required:    true,
-				},
-			},
-			Handler: onConnect,
-		},
-		{
-			Name:        "disconnect",
-			Description: "Disconnect the bot from voice",
-			Handler:     onDisconnect,
-		},
-		{
-			Name:        "play",
-			Description: "Play a youtube video",
-			Options: []CommandOption{
-				{
-					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "video",
-					Description: "The link of the video",
-					Required:    true,
-				},
-			},
-			Handler: onPlay,
-		},
-		{
-			Name:        "replay",
-			Description: "Toggle replay mode",
-			Handler:     onReplay,
-		},
-		{
-			Name:        "skip",
-			Description: "Skip one or more queued videos",
-			Options: []CommandOption{
-				{
-					Type:        discordgo.ApplicationCommandOptionInteger,
-					Name:        "number",
-					Description: "The number of videos to skip",
-					Required:    false,
-				},
-			},
-			Handler: onSkip,
-		},
-		{
-			Name:        "volume",
-			Description: "Set the bot volume",
-			Options: []CommandOption{
-				{
-					Type:        discordgo.ApplicationCommandOptionInteger,
-					Name:        "number",
-					Description: "The volume percentage as an integer",
-					Required:    true,
-					MinValue:    &minVolume,
-					MaxValue:    maxVolume,
-				},
-			},
-			Handler: onSetVolume,
-		},
-		{
-			Name:        "queue",
-			Description: "Get the current queue",
-			Handler:     onQueue,
-		},
-	})
 }
