@@ -393,7 +393,6 @@ func Process(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	switch event.Data.Interaction.Type {
 	case discordgo.InteractionApplicationCommand:
 		data := event.Data.ApplicationCommandData()
-		log.Info().Msg(data.Name)
 		key, options := parseRawCommandInteractionData(&data)
 
 		cmd, ok := allCommands[key]
