@@ -148,14 +148,11 @@ func createChatCommands(commands []Command) {
 		}
 	}
 
-	// Build description
-	fmt.Fprintf(&builder, "Commands belonging to the %s category", callerFuncName)
-
 	// Append createdCommands to temporary init commands list
 	allCommandsRaw = append(allCommandsRaw, &discordgo.ApplicationCommand{
 		Name:        callerFuncName,
 		Type:        discordgo.ChatApplicationCommand,
-		Description: builder.String(),
+		Description: fmt.Sprintf("Commands belonging to the %s category", callerFuncName),
 		Options:     parseCommands(callerFuncName, commands),
 	})
 }
@@ -387,6 +384,7 @@ func Process(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	switch event.Data.Interaction.Type {
 	case discordgo.InteractionApplicationCommand:
 		data := event.Data.ApplicationCommandData()
+		log.Info().Msg(data.Name)
 		key, options := parseRawCommandInteractionData(&data)
 
 		cmd, ok := allCommands[key]
