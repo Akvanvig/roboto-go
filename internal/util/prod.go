@@ -24,7 +24,3 @@ func SetupRuntimeEnvironment() {
 
 	globals.RootPath = filepath.Dir(execPath)
 }
-
-func Assert() {
-
-}

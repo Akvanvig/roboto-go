@@ -66,7 +66,10 @@ func onGameWithMe(cmd *Command, event *Event) {
 		Type: ResponseModal,
 		Data: &ResponseData{
 			// Note(Fredrico):
-			// The parameter to GenerateModalID is optional
+			// The parameter to GenerateModalID is optional.
+			// ToDo(Fredrico):
+			// Contemplate auto generating this ID somewhere else based on runtime caller data maybe?
+			// As it is, this isn't intuitive anyhow. Gosh the API for this is shit.
 			CustomID: cmd.GenerateModalID(event.Data.Interaction.Member.User.ID),
 			Title:    "A Game",
 			Components: []discordgo.MessageComponent{

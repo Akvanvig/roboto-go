@@ -130,16 +130,20 @@ func createChatCommands(commands []Command) {
 
 	// Override topmost type if it's not set to ApplicationCommandOptionSubCommandGroup
 	for i := 0; i < len(commands); i++ {
-		if commands[i].Type != discordgo.ApplicationCommandOptionSubCommandGroup {
-			if commands[i].Type != 0 {
-				fmt.Fprintf(&builder,
-					"Chat command type always has to be 'ApplicationCommandOptionSubCommandGroup' or 'ApplicationCommandOptionSubCommand' at the top level. Forcefully correcting type on command '%s' in the '%s' category",
-					commands[i].Name, callerFuncName)
+		switch commands[i].Type {
+		case discordgo.ApplicationCommandOptionSubCommandGroup:
+			continue
+		case discordgo.ApplicationCommandOptionSubCommand:
+			continue
+		default:
+			fmt.Fprintf(&builder,
+				"Chat command type always has to be 'ApplicationCommandOptionSubCommandGroup' or 'ApplicationCommandOptionSubCommand' at the top level. Forcefully correcting type on command '%s' in the '%s' category",
+				commands[i].Name, callerFuncName)
 
-				log.Warn().Msg(builder.String())
-				builder.Reset()
-			}
-
+			log.Warn().Msg(builder.String())
+			builder.Reset()
+			fallthrough
+		case 0:
 			commands[i].Type = discordgo.ApplicationCommandOptionSubCommand
 		}
 	}
@@ -204,8 +208,9 @@ func createUserContextCommands(commands []Command) {
 }
 
 // ToDo(Fredrico):
-// Define one more function:
-// createMessageCommands
+func createMessageContextCommands(commands []Command) {
+
+}
 
 // ToDo(Fredrico):
 // Rename the function and perhaps try to make it have more sensible parameters
@@ -224,7 +229,7 @@ func parseRawCommandInteractionData(data *discordgo.ApplicationCommandInteractio
 		if option.Type != discordgo.ApplicationCommandOptionSubCommandGroup && option.Type != discordgo.ApplicationCommandOptionSubCommand {
 			break
 		} else {
-			builder.WriteString(fmt.Sprintf("_%s", options[0].Name))
+			fmt.Fprintf(&builder, "_%s", options[0].Name)
 		}
 
 		options = option.Options
@@ -355,8 +360,6 @@ func Sync(s *discordgo.Session) error {
 
 	{
 		// Cleanup of init alloc data
-		log.Info().Msg("Cleaning up temporary init data")
-
 		var m runtime.MemStats
 		runtime.ReadMemStats(&m)
 		bytesBefore := m.Alloc
@@ -366,7 +369,7 @@ func Sync(s *discordgo.Session) error {
 		runtime.ReadMemStats(&m)
 		bytesAfter := m.Alloc
 
-		log.Info().Uint64("bytes", bytesBefore-bytesAfter).Msg("Finished cleaning up temporary init data")
+		log.Info().Uint64("bytes", bytesBefore-bytesAfter).Msg("Cleaned up temporary init data")
 	}
 
 	log.Info().Msg("Finished synchronizing commands")
@@ -388,7 +391,7 @@ func Process(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 		cmd, ok := allCommands[key]
 		if !ok {
-			// If key is not valid we are dealing with a user context command and need to get the cmd again
+			// If key is not valid we are most likely dealing with a user context command and need to get the cmd again
 			key = fmt.Sprintf("context_%s", key)
 			cmd, ok = allCommands[key]
 

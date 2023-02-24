@@ -21,10 +21,6 @@ func SetupRuntimeEnvironment() {
 
 	log.Warn().Msg("Dev mode is enabled, do not use this flag in production")
 
-	_, mainPath, _, _ := runtime.Caller(0)
-	globals.RootPath = filepath.Join(filepath.Dir(mainPath), "../..")
-}
-
-func Assert() {
-
+	_, utilDevPath, _, _ := runtime.Caller(0)
+	globals.RootPath = filepath.Join(filepath.Dir(utilDevPath), "../..")
 }
