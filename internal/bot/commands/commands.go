@@ -75,10 +75,9 @@ type CommandOption struct {
 
 // Note(Fredrico):
 /* Potential future parameters for addCommands
-		Version           string                 `json:"version,omitempty"`
-    DefaultMemberPermissions *int64 `json:"default_member_permissions,string,omitempty"`
-    DMPermission             *bool  `json:"dm_permission,omitempty"`
-    NSFW                     *bool  `json:"nsfw,omitempty"`
+   DefaultMemberPermissions *int64 `json:"default_member_permissions,string,omitempty"`
+   DMPermission             *bool  `json:"dm_permission,omitempty"`
+   NSFW                     *bool  `json:"nsfw,omitempty"`
 */
 func createChatCommands(commands []Command) {
 	var builder strings.Builder
@@ -145,16 +144,15 @@ func createChatCommands(commands []Command) {
 		}
 	}
 
-	name := callerFuncName
-	description := fmt.Sprintf("Commands belonging to the %s category", callerFuncName)
-	patsedCommands := parseCommands(callerFuncName, commands)
+	// Build description
+	fmt.Fprintf(&builder, "Commands belonging to the %s category", callerFuncName)
 
 	// Append createdCommands to temporary init commands list
 	allCommandsRaw = append(allCommandsRaw, &discordgo.ApplicationCommand{
-		Name:        name,
+		Name:        callerFuncName,
 		Type:        discordgo.ChatApplicationCommand,
-		Description: description,
-		Options:     patsedCommands,
+		Description: builder.String(),
+		Options:     parseCommands(callerFuncName, commands),
 	})
 }
 
