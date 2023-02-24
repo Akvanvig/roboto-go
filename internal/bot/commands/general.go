@@ -14,13 +14,17 @@ func init() {
 		{
 			Name:        "catjam",
 			Description: "Let's jam!",
-			Handler:     onCatJam,
+			Handler: &CommandHandler{
+				OnRun: onCatJam,
+			},
 		},
 		{
-			Name:               "gamewithme",
-			Description:        "Let's play a game",
-			Handler:            onGameWithMe,
-			HandlerModalSubmit: onGameWithMeSubmit,
+			Name:        "gamewithme",
+			Description: "Let's play a game",
+			Handler: &CommandHandler{
+				OnRun:         onGameWithMe,
+				OnModalSubmit: onGameWithMeSubmit,
+			},
 		},
 	})
 
@@ -28,8 +32,10 @@ func init() {
 		{
 			Name: "Play a game",
 			// We can reuse handlers!!
-			Handler:            onGameWithMe,
-			HandlerModalSubmit: onGameWithMeSubmit,
+			Handler: &CommandHandler{
+				OnRun:         onGameWithMe,
+				OnModalSubmit: onGameWithMeSubmit,
+			},
 		},
 	})
 }

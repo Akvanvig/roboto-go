@@ -62,15 +62,19 @@ type CommandOption struct {
 	// Maximum length of string option.
 	MaxLength int
 
-	// Event handler
-	Handler func(cmd *Command, event *Event)
-	// Modal event handler
-	HandlerModalSubmit func(cmd *Command, event *Event, identifier string)
-	// Commmand check handler
-	Check func(cmd *Command, event *Event) error
-
+	// Event handlers
+	Handler *CommandHandler
 	// Full command key
 	key string
+}
+
+type CommandHandler struct {
+	// Check handler
+	OnPassingCheck func(cmd *Command, event *Event) error
+	// Event handler
+	OnRun func(cmd *Command, event *Event)
+	// Modal event handler
+	OnModalSubmit func(cmd *Command, event *Event, identifier string)
 }
 
 // Note(Fredrico):
@@ -148,11 +152,16 @@ func createChatCommands(commands []Command) {
 		}
 	}
 
+	// Build description
+	fmt.Fprintf(&builder, "Commands belonging to the %s category", callerFuncName)
+	description := builder.String()
+	builder.Reset()
+
 	// Append createdCommands to temporary init commands list
 	allCommandsRaw = append(allCommandsRaw, &discordgo.ApplicationCommand{
 		Name:        callerFuncName,
 		Type:        discordgo.ChatApplicationCommand,
-		Description: fmt.Sprintf("Commands belonging to the %s category", callerFuncName),
+		Description: description,
 		Options:     parseCommands(callerFuncName, commands),
 	})
 }
@@ -401,14 +410,14 @@ func Process(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			event.Options = options
 		}
 
-		if cmd.Check != nil {
-			err = cmd.Check(&cmd, &event)
+		if cmd.Handler.OnPassingCheck != nil {
+			err = cmd.Handler.OnPassingCheck(&cmd, &event)
 			if err != nil {
 				break
 			}
 		}
 
-		cmd.Handler(&cmd, &event)
+		cmd.Handler.OnRun(&cmd, &event)
 
 		return
 	case discordgo.InteractionModalSubmit:
@@ -428,7 +437,7 @@ func Process(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			id = tmp[1]
 		}
 
-		cmd.HandlerModalSubmit(&cmd, &event, id)
+		cmd.Handler.OnModalSubmit(&cmd, &event, id)
 
 		return
 	}

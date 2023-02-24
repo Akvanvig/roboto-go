@@ -27,12 +27,16 @@ func init() {
 					Required:    true,
 				},
 			},
-			Handler: onConnect,
+			Handler: &CommandHandler{
+				OnRun: onConnect,
+			},
 		},
 		{
 			Name:        "disconnect",
 			Description: "Disconnect the bot from voice",
-			Handler:     onDisconnect,
+			Handler: &CommandHandler{
+				OnRun: onDisconnect,
+			},
 		},
 		{
 			Name:        "play",
@@ -45,12 +49,16 @@ func init() {
 					Required:    true,
 				},
 			},
-			Handler: onPlay,
+			Handler: &CommandHandler{
+				OnRun: onPlay,
+			},
 		},
 		{
 			Name:        "replay",
 			Description: "Toggle replay mode",
-			Handler:     onReplay,
+			Handler: &CommandHandler{
+				OnRun: onReplay,
+			},
 		},
 		{
 			Name:        "skip",
@@ -63,7 +71,9 @@ func init() {
 					Required:    false,
 				},
 			},
-			Handler: onSkip,
+			Handler: &CommandHandler{
+				OnRun: onSkip,
+			},
 		},
 		{
 			Name:        "volume",
@@ -78,12 +88,16 @@ func init() {
 					MaxValue:    maxVolume,
 				},
 			},
-			Handler: onSetVolume,
+			Handler: &CommandHandler{
+				OnRun: onSetVolume,
+			},
 		},
 		{
 			Name:        "queue",
 			Description: "Get the current queue",
-			Handler:     onQueue,
+			Handler: &CommandHandler{
+				OnRun: onQueue,
+			},
 		},
 	})
 }
