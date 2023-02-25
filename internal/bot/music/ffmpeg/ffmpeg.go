@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/Akvanvig/roboto-go/internal/globals"
+	"github.com/Akvanvig/roboto-go/internal/util"
 	"github.com/rs/zerolog/log"
 )
 
@@ -16,7 +16,7 @@ func New(ctx context.Context, url string) (io.ReadCloser, error) {
 
 	switch runtime.GOOS {
 	case "windows":
-		ffmpegPath = filepath.Join(globals.RootPath, "ffmpeg.exe")
+		ffmpegPath = filepath.Join(util.RootPath, "ffmpeg.exe")
 	case "linux":
 		ffmpegPath = "ffmpeg"
 	default:

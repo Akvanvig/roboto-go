@@ -6,21 +6,20 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Akvanvig/roboto-go/internal/globals"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
-func SetupRuntimeEnvironment() {
+func setupLogging() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
 	// Note(Fredrico):
-	// Else, set RootPath to executable path
+	// In dev, we set RootPath to be the executable's directory
 	execPath, err := os.Executable()
 
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to find running executable path")
 	}
 
-	globals.RootPath = filepath.Dir(execPath)
+	RootPath = filepath.Dir(execPath)
 }

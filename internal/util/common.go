@@ -7,6 +7,16 @@ import (
 	"unsafe"
 )
 
+var RootPath string
+
+func init() {
+	setupLogging()
+}
+
+func Init() {
+	// Implicitly causes init() to be called
+}
+
 func GetInt16Representation(bytes []byte) []int16 {
 	return unsafe.Slice((*int16)(unsafe.Pointer(&bytes[0])), len(bytes)/2)
 }

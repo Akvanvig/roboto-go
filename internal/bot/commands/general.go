@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Akvanvig/roboto-go/internal/globals"
+	"github.com/Akvanvig/roboto-go/internal/util"
 	"github.com/bwmarrin/discordgo"
 	"github.com/rs/zerolog/log"
 )
@@ -28,20 +28,19 @@ func init() {
 		},
 	})
 
-	createUserContextCommands([]Command{
+	createContextCommands([]Command{
 		{
-			Name: "Play a game",
-			// We can reuse handlers!!
+			Name: "OPEEEN UP",
 			Handler: &CommandHandler{
 				OnRun:         onGameWithMe,
 				OnModalSubmit: onGameWithMeSubmit,
 			},
 		},
-	})
+	}, ContextTypeUser)
 }
 
-func onCatJam(cmd *Command, event *Event) {
-	file, err := os.Open(filepath.Join(globals.RootPath, "assets/img/catjam.gif"))
+func onCatJam(event *Event) {
+	file, err := os.Open(filepath.Join(util.RootPath, "assets/img/catjam.gif"))
 
 	if err != nil {
 		log.Error().Err(err).Send()
@@ -67,29 +66,20 @@ func onCatJam(cmd *Command, event *Event) {
 
 // TODO(Fredrico):
 // This is unfinished
-func onGameWithMe(cmd *Command, event *Event) {
-	event.Respond(&Response{
-		Type: ResponseModal,
-		Data: &ResponseData{
-			// Note(Fredrico):
-			// The parameter to GenerateModalID is optional.
-			// ToDo(Fredrico):
-			// Contemplate auto generating this ID somewhere else based on runtime caller data maybe?
-			// As it is, this isn't intuitive anyhow. Gosh the API for this is shit.
-			CustomID: cmd.GenerateModalID(event.Data.Interaction.Member.User.ID),
-			Title:    "A Game",
-			Components: []discordgo.MessageComponent{
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.TextInput{
-							CustomID:    "opinion",
-							Label:       "Why do you want to play the game?",
-							Style:       discordgo.TextInputShort,
-							Placeholder: "Don't be shy, tell me",
-							Required:    true,
-							MaxLength:   300,
-							MinLength:   10,
-						},
+func onGameWithMe(event *Event) {
+	event.RespondModal(event.Command, &ResponseData{
+		Title: "A Game",
+		Components: []discordgo.MessageComponent{
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.TextInput{
+						CustomID:    "opinion",
+						Label:       "Why do you want to play the game?",
+						Style:       discordgo.TextInputShort,
+						Placeholder: "Don't be shy, tell me",
+						Required:    true,
+						MaxLength:   300,
+						MinLength:   10,
 					},
 				},
 			},
@@ -97,6 +87,6 @@ func onGameWithMe(cmd *Command, event *Event) {
 	})
 }
 
-func onGameWithMeSubmit(cmd *Command, event *Event, identifier string) {
-	event.RespondMsg("Thank you for playing! Here's your doxed user ID: " + identifier)
+func onGameWithMeSubmit(event *Event) {
+	event.RespondMsg("Thank you for playing!")
 }

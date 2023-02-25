@@ -10,7 +10,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/Akvanvig/roboto-go/internal/globals"
+	"github.com/Akvanvig/roboto-go/internal/util"
 	"github.com/rs/zerolog/log"
 )
 
@@ -148,9 +148,9 @@ func youtubedlPath() string {
 
 	switch runtime.GOOS {
 	case "windows":
-		ytdlPath = filepath.Join(globals.RootPath, "yt-dlp.exe")
+		ytdlPath = filepath.Join(util.RootPath, "yt-dlp.exe")
 	case "linux":
-		ytdlPath = filepath.Join(globals.RootPath, "yt-dlp")
+		ytdlPath = filepath.Join(util.RootPath, "yt-dlp")
 	default:
 		log.Fatal().Msg("Trying to run youtube-dl on an unsupported system")
 	}

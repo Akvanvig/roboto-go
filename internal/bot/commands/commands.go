@@ -19,25 +19,19 @@ const (
 	ResponseMsgUpdateLater = discordgo.InteractionResponseDeferredMessageUpdate
 	ResponseAutoComplete   = discordgo.InteractionApplicationCommandAutocompleteResult
 	ResponseModal          = discordgo.InteractionResponseModal
+
+	ContextTypeUser    = discordgo.UserApplicationCommand
+	ContextTypeMessage = discordgo.MessageApplicationCommand
 )
 
 var allCommandsRaw = []*discordgo.ApplicationCommand{}
-var allCommands = map[string]Command{}
+var allCommands = map[string]CommandOption{}
 
 type (
 	Response           = discordgo.InteractionResponse
 	ResponseData       = discordgo.InteractionResponseData
 	ResponseDataUpdate = discordgo.WebhookEdit
-	Command            = CommandOption
 )
-
-type Event struct {
-	Session    *discordgo.Session                                   // Required
-	Data       *discordgo.InteractionCreate                         // Required
-	Options    []*discordgo.ApplicationCommandInteractionDataOption // Optional
-	Components []discordgo.MessageComponent                         // Optional
-	ID         string                                               // Optional
-}
 
 type CommandOption struct {
 	Type                     discordgo.ApplicationCommandOptionType
@@ -70,37 +64,56 @@ type CommandOption struct {
 
 type CommandHandler struct {
 	// Check handler
-	OnPassingCheck func(cmd *Command, event *Event) error
+	OnPassingCheck func(*Event) error
 	// Event handler
-	OnRun func(cmd *Command, event *Event)
+	OnRun func(*Event)
 	// Modal event handler
-	OnModalSubmit func(cmd *Command, event *Event, identifier string)
+	OnModalSubmit func(*Event)
 }
 
-// Note(Fredrico):
-/* Potential future parameters for addCommands
-   DefaultMemberPermissions *int64 `json:"default_member_permissions,string,omitempty"`
-   DMPermission             *bool  `json:"dm_permission,omitempty"`
-   NSFW                     *bool  `json:"nsfw,omitempty"`
-*/
-func createChatCommands(commands []Command) {
+type Command = CommandOption
+
+type CommandConverter func(cmd *Command)
+
+type Event struct {
+	Session    *discordgo.Session                                   // Discord session
+	Command    *Command                                             // Command triggering the event
+	Data       *discordgo.InteractionCreate                         // Event data
+	Options    []*discordgo.ApplicationCommandInteractionDataOption // Extracted options from the event data
+	Components []discordgo.MessageComponent                         // Extracted components from the event data
+}
+
+func createChatCommands(commands []Command, converters ...CommandConverter) {
+	fileNameCaller := util.GetCallingFuncFileName()
 	var builder strings.Builder
-	callerFuncName := util.GetCallingFuncFileName()
 
-	// Define recursive parsing function
-	var parseCommands func(string, []Command) []*discordgo.ApplicationCommandOption
-	parseCommands = func(groupName string, commands []Command) []*discordgo.ApplicationCommandOption {
-		commandsLen := len(commands)
+	// Define options generator function
+	var generateOptions func(string, []CommandOption) []*discordgo.ApplicationCommandOption
+	generateOptions = func(groupName string, options []CommandOption) []*discordgo.ApplicationCommandOption {
+		optionsLen := len(options)
 
-		if commandsLen == 0 {
+		if optionsLen == 0 {
 			return nil
 		}
 
-		commandsConverted := make([]*discordgo.ApplicationCommandOption, commandsLen)
+		optionsGenerated := make([]*discordgo.ApplicationCommandOption, optionsLen)
 
-		for i := 0; i < commandsLen; i++ {
-			var options []*discordgo.ApplicationCommandOption
-			cmd := &commands[i]
+		for i := 0; i < optionsLen; i++ {
+			cmd := &options[i]
+			optionsGenerated[i] = &discordgo.ApplicationCommandOption{
+				Type:                     cmd.Type,
+				Name:                     cmd.Name,
+				Description:              cmd.Description,
+				DescriptionLocalizations: cmd.DescriptionLocalizations,
+				ChannelTypes:             cmd.ChannelTypes,
+				Required:                 cmd.Required,
+				Autocomplete:             cmd.Autocomplete,
+				Choices:                  cmd.Choices,
+				MinValue:                 cmd.MinValue,
+				MaxValue:                 cmd.MaxValue,
+				MinLength:                cmd.MinLength,
+				MaxLength:                cmd.MaxLength,
+			}
 
 			if cmd.Type == discordgo.ApplicationCommandOptionSubCommandGroup || cmd.Type == discordgo.ApplicationCommandOptionSubCommand {
 				fmt.Fprintf(&builder, "%s_%s", groupName, cmd.Name)
@@ -109,32 +122,23 @@ func createChatCommands(commands []Command) {
 
 				cmd.key = key
 				allCommands[key] = *cmd
-				options = parseCommands(key, cmd.Options)
-			}
-
-			commandsConverted[i] = &discordgo.ApplicationCommandOption{
-				Type:                     cmd.Type,
-				Name:                     cmd.Name,
-				Description:              cmd.Description,
-				DescriptionLocalizations: cmd.DescriptionLocalizations,
-				ChannelTypes:             cmd.ChannelTypes,
-				Required:                 cmd.Required,
-				Options:                  options,
-				Autocomplete:             cmd.Autocomplete,
-				Choices:                  cmd.Choices,
-				MinValue:                 cmd.MinValue,
-				MaxValue:                 cmd.MaxValue,
-				MinLength:                cmd.MinLength,
-				MaxLength:                cmd.MaxLength,
+				optionsGenerated[i].Options = generateOptions(key, cmd.Options)
 			}
 		}
 
-		return commandsConverted
+		return optionsGenerated
 	}
 
-	// Override topmost type if it's not set to ApplicationCommandOptionSubCommandGroup
 	for i := 0; i < len(commands); i++ {
-		switch commands[i].Type {
+		cmd := &commands[i]
+
+		// Run user defined converters
+		for _, convert := range converters {
+			convert(cmd)
+		}
+
+		// Override topmost type if it's not set to ApplicationCommandOptionSubCommandGroup
+		switch cmd.Type {
 		case discordgo.ApplicationCommandOptionSubCommandGroup:
 			continue
 		case discordgo.ApplicationCommandOptionSubCommand:
@@ -142,80 +146,77 @@ func createChatCommands(commands []Command) {
 		default:
 			fmt.Fprintf(&builder,
 				"Chat command type always has to be 'ApplicationCommandOptionSubCommandGroup' or 'ApplicationCommandOptionSubCommand' at the top level. Forcefully correcting type on command '%s' in the '%s' category",
-				commands[i].Name, callerFuncName)
+				cmd.Name, fileNameCaller)
 
 			log.Warn().Msg(builder.String())
 			builder.Reset()
 			fallthrough
 		case 0:
-			commands[i].Type = discordgo.ApplicationCommandOptionSubCommand
+			cmd.Type = discordgo.ApplicationCommandOptionSubCommand
 		}
 	}
 
 	// Build description
-	fmt.Fprintf(&builder, "Commands belonging to the %s category", callerFuncName)
+	fmt.Fprintf(&builder, "Commands belonging to the %s category", fileNameCaller)
 	description := builder.String()
 	builder.Reset()
 
 	// Append createdCommands to temporary init commands list
 	allCommandsRaw = append(allCommandsRaw, &discordgo.ApplicationCommand{
-		Name:        callerFuncName,
+		Name:        fileNameCaller,
 		Type:        discordgo.ChatApplicationCommand,
 		Description: description,
-		Options:     parseCommands(callerFuncName, commands),
+		Options:     generateOptions(fileNameCaller, commands),
 	})
 }
 
-func createUserContextCommands(commands []Command) {
-	callerFuncName := util.GetCallingFuncFileName()
+func createContextCommands(commands []Command, contextType discordgo.ApplicationCommandType, converters ...CommandConverter) {
+	fileNameCaller := util.GetCallingFuncFileName()
 
 	for i := 0; i < len(commands); i++ {
 		var builder strings.Builder
+		cmd := &commands[i]
 
 		if commands[i].Type != 0 {
 			fmt.Fprintf(&builder,
-				"User context command can't have a set type. Ignoring set value on command '%s' in the '%s' category",
-				commands[i].Name, callerFuncName)
+				"Context command can't have a set type. Ignoring set value on command '%s' in the '%s' category",
+				cmd.Name, fileNameCaller)
 
 			log.Warn().Msg(builder.String())
 			builder.Reset()
-			commands[i].Type = 0
+			cmd.Type = 0
 		}
 
 		if commands[i].Description != "" {
 			fmt.Fprintf(&builder,
-				"User context command can't have a description. Ignoring set value on command '%s' in the '%s' category",
-				commands[i].Name, callerFuncName)
+				"Context command can't have a description. Ignoring set value on command '%s' in the '%s' category",
+				cmd.Name, fileNameCaller)
 
 			log.Warn().Msg(builder.String())
 			builder.Reset()
-			commands[i].Description = ""
+			cmd.Description = ""
 		}
 
-		if commands[i].Options != nil {
+		if cmd.Options != nil {
 			fmt.Fprintf(&builder,
-				"User context command can't contain options array. Ignoring set value on command '%s' in the '%s' category",
-				commands[i].Name, callerFuncName)
+				"Context command can't contain options array. Ignoring set value on command '%s' in the '%s' category",
+				cmd.Name, fileNameCaller)
 
 			log.Warn().Msg(builder.String())
 			builder.Reset()
-			commands[i].Options = nil
+			cmd.Options = nil
 		}
 
 		fmt.Fprintf(&builder, "context_%s", commands[i].Name)
 		key := builder.String()
+		builder.Reset()
 
-		allCommands[key] = commands[i]
+		allCommands[key] = *cmd
 		allCommandsRaw = append(allCommandsRaw, &discordgo.ApplicationCommand{
 			Name: commands[i].Name,
-			Type: discordgo.UserApplicationCommand,
+			Type: contextType,
 		})
 	}
-}
-
-// ToDo(Fredrico):
-func createMessageContextCommands(commands []Command) {
-
 }
 
 // ToDo(Fredrico):
@@ -257,6 +258,15 @@ func (event *Event) Respond(response *Response) error {
 func (event *Event) RespondLater() error {
 	return event.Respond(&Response{
 		Type: ResponseMsgLater,
+	})
+}
+
+func (event *Event) RespondModal(cmd *Command, responseData *ResponseData) error {
+	// Automatically set modal ID to cmd key to enable the handler to work
+	responseData.CustomID = cmd.key
+	return event.Respond(&Response{
+		Type: ResponseModal,
+		Data: responseData,
 	})
 }
 
@@ -303,17 +313,9 @@ func (event *Event) RespondUpdateMsgLog(msg string) error {
 		userNameFull = event.Data.Interaction.User.Username + "#" + event.Data.Interaction.User.Discriminator
 	}
 
-	log.Error().Str("username", userNameFull).Str("uuid", uuid).Msg(msg)
+	log.Info().Str("username", userNameFull).Str("uuid", uuid).Msg(msg)
 
 	return event.RespondUpdateMsg(msg)
-}
-
-func (command *Command) GenerateModalID(userData string) string {
-	if userData != "" {
-		return command.key + "|" + userData
-	} else {
-		return command.key
-	}
 }
 
 func Sync(s *discordgo.Session) error {
@@ -397,46 +399,35 @@ func Process(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 		cmd, ok := allCommands[key]
 		if !ok {
-			// If key is not valid we are most likely dealing with a user context command and need to get the cmd again
-			key = fmt.Sprintf("context_%s", key)
-			cmd, ok = allCommands[key]
-
-			if !ok {
-				break
-			}
-		} else {
-			// Else, we are simply dealing with a normal chat command
-			event.Options = options
+			break
 		}
 
+		event.Command = &cmd
+		event.Options = options
+
 		if cmd.Handler.OnPassingCheck != nil {
-			err = cmd.Handler.OnPassingCheck(&cmd, &event)
+			err = cmd.Handler.OnPassingCheck(&event)
 			if err != nil {
 				break
 			}
 		}
 
-		cmd.Handler.OnRun(&cmd, &event)
+		cmd.Handler.OnRun(&event)
 
 		return
 	case discordgo.InteractionModalSubmit:
 		data := event.Data.ModalSubmitData()
-		tmp := strings.SplitN(data.CustomID, "|", 2)
-		cmdKey := tmp[0]
+		key := data.CustomID
 
-		cmd, ok := allCommands[cmdKey]
+		cmd, ok := allCommands[key]
 		if !ok {
 			break
 		}
 
+		event.Command = &cmd
 		event.Components = data.Components
 
-		var id string
-		if len(tmp) > 1 {
-			id = tmp[1]
-		}
-
-		cmd.Handler.OnModalSubmit(&cmd, &event, id)
+		cmd.Handler.OnModalSubmit(&event)
 
 		return
 	}

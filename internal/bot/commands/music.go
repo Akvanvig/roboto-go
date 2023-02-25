@@ -15,6 +15,17 @@ func init() {
 		maxVolume = 200.0
 	)
 
+	// Set common properties for all commands
+	converter := func(cmd *Command) {
+		cmd.Handler.OnPassingCheck = func(event *Event) error {
+			if event.Data.Interaction.Member == nil {
+				return errors.New("You can not play a song in a DM")
+			}
+
+			return nil
+		}
+	}
+
 	createChatCommands([]Command{
 		{
 			Name:        "connect",
@@ -99,18 +110,10 @@ func init() {
 				OnRun: onQueue,
 			},
 		},
-	})
+	}, converter)
 }
 
-func isGuildCmd(cmd *Command, event *Event) error {
-	if event.Data.Interaction.Member == nil {
-		return errors.New("You can not play a song in a DM")
-	}
-
-	return nil
-}
-
-func onConnect(cmd *Command, event *Event) {
+func onConnect(event *Event) {
 	event.RespondLater()
 
 	guildID := event.Data.Interaction.GuildID
@@ -150,7 +153,7 @@ func onConnect(cmd *Command, event *Event) {
 	}()
 }
 
-func onDisconnect(cmd *Command, event *Event) {
+func onDisconnect(event *Event) {
 	event.RespondLater()
 
 	guildID := event.Data.Interaction.GuildID
@@ -168,7 +171,7 @@ func onDisconnect(cmd *Command, event *Event) {
 	}()
 }
 
-func onPlay(cmd *Command, event *Event) {
+func onPlay(event *Event) {
 	event.RespondLater()
 
 	guildID := event.Data.Interaction.GuildID
@@ -203,7 +206,7 @@ func onPlay(cmd *Command, event *Event) {
 	}()
 }
 
-func onSkip(cmd *Command, event *Event) {
+func onSkip(event *Event) {
 	event.RespondLater()
 
 	guildID := event.Data.Interaction.GuildID
@@ -227,7 +230,7 @@ func onSkip(cmd *Command, event *Event) {
 	}()
 }
 
-func onQueue(cmd *Command, event *Event) {
+func onQueue(event *Event) {
 	event.RespondLater()
 
 	guildID := event.Data.Interaction.GuildID
@@ -249,7 +252,7 @@ func onQueue(cmd *Command, event *Event) {
 	}()
 }
 
-func onReplay(cmd *Command, event *Event) {
+func onReplay(event *Event) {
 	event.RespondLater()
 
 	guildID := event.Data.Interaction.GuildID
@@ -266,7 +269,7 @@ func onReplay(cmd *Command, event *Event) {
 	}
 }
 
-func onSetVolume(cmd *Command, event *Event) {
+func onSetVolume(event *Event) {
 	event.RespondLater()
 
 	guildID := event.Data.Interaction.GuildID
