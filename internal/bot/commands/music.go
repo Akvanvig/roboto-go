@@ -15,18 +15,18 @@ func init() {
 		maxVolume = 200.0
 	)
 
-	// Set common properties for all commands
+	// Set common properties for all created commands
 	converter := func(cmd *Command) {
-		cmd.Handler.OnPassingCheck = func(event *Event) error {
+		cmd.Handler.OnRunCheck = func(event *Event) error {
 			if event.Data.Interaction.Member == nil {
-				return errors.New("You can not play a song in a DM")
+				return errors.New("You can't play a song in a DM")
 			}
 
 			return nil
 		}
 	}
 
-	createChatCommands([]Command{
+	createCommands([]Command{
 		{
 			Name:        "connect",
 			Description: "Connect the bot to a voice channel",
@@ -110,7 +110,7 @@ func init() {
 				OnRun: onQueue,
 			},
 		},
-	}, converter)
+	}, CommandContextChat, converter)
 }
 
 func onConnect(event *Event) {

@@ -1,16 +1,17 @@
 //go:build !dev
 
-package util
+package _setup
 
 import (
 	"os"
 	"path/filepath"
 
+	"github.com/Akvanvig/roboto-go/internal/util"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
-func setupLogging() {
+func init() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
 	// Note(Fredrico):
@@ -21,5 +22,5 @@ func setupLogging() {
 		log.Fatal().Err(err).Msg("Failed to find running executable path")
 	}
 
-	RootPath = filepath.Dir(execPath)
+	util.RootPath = filepath.Dir(execPath)
 }

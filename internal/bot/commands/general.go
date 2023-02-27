@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	createChatCommands([]Command{
+	createCommands([]Command{
 		{
 			Name:        "catjam",
 			Description: "Let's jam!",
@@ -19,16 +19,16 @@ func init() {
 			},
 		},
 		{
-			Name:        "gamewithme",
+			Name:        "game withme",
 			Description: "Let's play a game",
 			Handler: &CommandHandler{
 				OnRun:         onGameWithMe,
 				OnModalSubmit: onGameWithMeSubmit,
 			},
 		},
-	})
+	}, CommandContextChat)
 
-	createContextCommands([]Command{
+	createCommands([]Command{
 		{
 			Name: "OPEEEN UP",
 			Handler: &CommandHandler{
@@ -36,7 +36,17 @@ func init() {
 				OnModalSubmit: onGameWithMeSubmit,
 			},
 		},
-	}, ContextTypeUser)
+	}, CommandContextUser)
+
+	createCommands([]Command{
+		{
+			Name: "CHECK THIS OUT",
+			Handler: &CommandHandler{
+				OnRun:         onGameWithMe,
+				OnModalSubmit: onGameWithMeSubmit,
+			},
+		},
+	}, CommandContextMessage)
 }
 
 func onCatJam(event *Event) {
