@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	. "github.com/Akvanvig/roboto-go/internal/bot/commands"
 	"github.com/Akvanvig/roboto-go/internal/bot/music"
 	"github.com/bwmarrin/discordgo"
 )
