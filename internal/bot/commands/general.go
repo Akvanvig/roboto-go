@@ -27,26 +27,27 @@ func init() {
 			},
 		},
 	})
-
-	CreateUserCommands([]Command{
-		{
-			Name: "OPEEEN UP",
-			Handler: &CommandHandler{
-				OnRun:         onGameWithMe,
-				OnModalSubmit: onGameWithMeSubmit,
+	/*
+		CreateUserCommands([]Command{
+			{
+				Name: "OPEEEN UP",
+				Handler: &CommandHandler{
+					OnRun:         onGameWithMe,
+					OnModalSubmit: onGameWithMeSubmit,
+				},
 			},
-		},
-	})
+		})
 
-	CreateMessageCommands([]Command{
-		{
-			Name: "CHECK THIS OUT",
-			Handler: &CommandHandler{
-				OnRun:         onGameWithMe,
-				OnModalSubmit: onGameWithMeSubmit,
+		CreateMessageCommands([]Command{
+			{
+				Name: "CHECK THIS OUT",
+				Handler: &CommandHandler{
+					OnRun:         onGameWithMe,
+					OnModalSubmit: onGameWithMeSubmit,
+				},
 			},
-		},
-	})
+		})
+	*/
 }
 
 func onCatJam(event *Event) {
