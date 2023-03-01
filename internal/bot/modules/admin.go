@@ -1,4 +1,4 @@
-package commands
+package modules
 
 func init() {
 	//_ := []Command{}

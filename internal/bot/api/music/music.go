@@ -11,9 +11,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Akvanvig/roboto-go/internal/bot/music/audioop"
-	"github.com/Akvanvig/roboto-go/internal/bot/music/ffmpeg"
-	"github.com/Akvanvig/roboto-go/internal/bot/music/youtubedl"
+	"github.com/Akvanvig/roboto-go/internal/bot/api/music/audioop"
+	"github.com/Akvanvig/roboto-go/internal/bot/api/music/ffmpeg"
+	"github.com/Akvanvig/roboto-go/internal/bot/api/music/youtubedl"
 	"github.com/Akvanvig/roboto-go/internal/util"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gammazero/deque"

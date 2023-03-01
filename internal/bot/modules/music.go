@@ -1,10 +1,11 @@
-package commands
+package modules
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/Akvanvig/roboto-go/internal/bot/music"
+	. "github.com/Akvanvig/roboto-go/internal/bot/api/commands"
+	"github.com/Akvanvig/roboto-go/internal/bot/api/music"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -27,7 +28,7 @@ func init() {
 		}
 	*/
 
-	CreateChatCommands(&CommandGroupSettings{
+	InitChatCommands(&CommandGroupSettings{
 		DMPermission: &allowDM,
 	}, []Command{
 		{

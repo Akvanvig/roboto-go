@@ -1,7 +1,8 @@
 package bot
 
 import (
-	"github.com/Akvanvig/roboto-go/internal/bot/commands"
+	"github.com/Akvanvig/roboto-go/internal/bot/api/commands"
+	_ "github.com/Akvanvig/roboto-go/internal/bot/modules"
 	"github.com/bwmarrin/discordgo"
 	"github.com/rs/zerolog/log"
 )
@@ -28,13 +29,23 @@ func onAuditlog(s *discordgo.Session, l *discordgo.AuditLogEntryCreate) {
 	switch *l.ActionType {
 	case discordgo.AuditLogActionMemberKick:
 		fallthrough
-	case discordgo.AuditLogActionMemberMove:
-		fallthrough
 	case discordgo.AuditLogActionMemberDisconnect:
 		if l.TargetID == s.State.User.ID {
 			log.Info().Msg("Detected event!")
 		}
 	}
+}
+*/
+
+/*
+func onVoiceStateUpdate(s *discordgo.Session, st *discordgo.VoiceStateUpdate) {
+	// We only care about ourselves
+	if st.UserID != s.State.User.ID {
+		return
+	}
+
+	st.VoiceState.
+		log.Info().Msg(fmt.Sprintf("Test %+v", st))
 }
 */
 

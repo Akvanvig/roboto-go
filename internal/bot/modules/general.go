@@ -1,16 +1,17 @@
-package commands
+package modules
 
 import (
 	"os"
 	"path/filepath"
 
+	. "github.com/Akvanvig/roboto-go/internal/bot/api/commands"
 	"github.com/Akvanvig/roboto-go/internal/util"
 	"github.com/bwmarrin/discordgo"
 	"github.com/rs/zerolog/log"
 )
 
 func init() {
-	CreateChatCommands(nil, []Command{
+	InitChatCommands(nil, []Command{
 		{
 			Name:        "catjam",
 			Description: "Let's jam!",
