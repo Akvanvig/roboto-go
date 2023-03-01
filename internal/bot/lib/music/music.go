@@ -11,9 +11,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Akvanvig/roboto-go/internal/bot/api/music/audioop"
-	"github.com/Akvanvig/roboto-go/internal/bot/api/music/ffmpeg"
-	"github.com/Akvanvig/roboto-go/internal/bot/api/music/youtubedl"
+	"github.com/Akvanvig/roboto-go/internal/bot/lib/music/audioop"
+	"github.com/Akvanvig/roboto-go/internal/bot/lib/music/ffmpeg"
+	"github.com/Akvanvig/roboto-go/internal/bot/lib/music/youtubedl"
 	"github.com/Akvanvig/roboto-go/internal/util"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gammazero/deque"
@@ -23,7 +23,7 @@ import (
 
 const PlayerDefaultVolume = 50
 
-// PlayerTimeoutSeconds must by divisible by PlayerLoopTickSeconds
+// PlayerTimeoutSeconds must be divisible by PlayerLoopTickSeconds
 const PlayerLoopTickSeconds = 3
 const PlayerTimeoutSeconds = 30
 

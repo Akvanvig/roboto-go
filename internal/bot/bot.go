@@ -1,7 +1,9 @@
 package bot
 
 import (
-	"github.com/Akvanvig/roboto-go/internal/bot/api/commands"
+	"fmt"
+
+	"github.com/Akvanvig/roboto-go/internal/bot/lib/commands"
 	_ "github.com/Akvanvig/roboto-go/internal/bot/modules"
 	"github.com/bwmarrin/discordgo"
 	"github.com/rs/zerolog/log"
@@ -10,15 +12,11 @@ import (
 var session *discordgo.Session
 
 func onReady(s *discordgo.Session, r *discordgo.Ready) {
-	log.Info().Msg("Connected as: " + s.State.User.Username + "#" + s.State.User.Discriminator)
+	log.Info().Msg(fmt.Sprintf("Connected as: %s#%s", s.State.User.Username, s.State.User.Discriminator))
 }
 
 func onMsg(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// Nothing yet
-}
-
-func onInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	commands.Process(s, i)
 }
 
 // Note(Fredrico):
@@ -62,7 +60,7 @@ func Start(token *string) {
 
 	session.AddHandler(onReady)
 	session.AddHandler(onMsg)
-	session.AddHandler(onInteraction)
+	session.AddHandler(commands.Process)
 	//session.AddHandler(onAuditlog)
 
 	err = session.Open()

@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	. "github.com/Akvanvig/roboto-go/internal/bot/api/commands"
+	. "github.com/Akvanvig/roboto-go/internal/bot/lib/commands"
 	"github.com/Akvanvig/roboto-go/internal/util"
 	"github.com/bwmarrin/discordgo"
 	"github.com/rs/zerolog/log"

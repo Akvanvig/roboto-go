@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	. "github.com/Akvanvig/roboto-go/internal/bot/api/commands"
-	"github.com/Akvanvig/roboto-go/internal/bot/api/music"
+	. "github.com/Akvanvig/roboto-go/internal/bot/lib/commands"
+	"github.com/Akvanvig/roboto-go/internal/bot/lib/music"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -36,9 +36,9 @@ func init() {
 			Description: "Connect the bot to a voice channel",
 			Options: []CommandOption{
 				{
-					Type:        discordgo.ApplicationCommandOptionString,
+					Type:        discordgo.ApplicationCommandOptionChannel,
 					Name:        "channel",
-					Description: "The voice channel id",
+					Description: "The voice channel",
 					Required:    true,
 				},
 			},
@@ -48,7 +48,7 @@ func init() {
 		},
 		{
 			Name:        "disconnect",
-			Description: "Disconnect the bot from voice",
+			Description: "Disconnect the bot from a voice channel",
 			Handler: &CommandHandler{
 				OnRun: onDisconnect,
 			},
@@ -120,48 +120,30 @@ func init() {
 func onConnect(event *Event) {
 	event.RespondLater()
 
-	guildID := event.Data.Interaction.GuildID
-	voiceChannelID := event.Options[0].StringValue()
-	var voiceChannel *discordgo.Channel
-
-	{
-		guildChannels, _ := event.Session.GuildChannels(guildID)
-
-		for _, channel := range guildChannels {
-			if channel.ID == voiceChannelID {
-				if channel.Type != discordgo.ChannelTypeGuildVoice {
-					break
-				}
-
-				voiceChannel = channel
-			}
-		}
-
-		if voiceChannel == nil {
-			event.RespondUpdateMsg("The provided channel id is not valid")
-			return
-		}
+	channel := event.Options[0].ChannelValue(event.Session)
+	if channel.Type != discordgo.ChannelTypeGuildVoice {
+		event.RespondUpdateMsg(fmt.Sprintf("%s is not a voice channel", channel.Mention()))
+		return
 	}
 
-	player := music.GetGuildPlayer(guildID)
+	player := music.GetGuildPlayer(event.Data.Interaction.GuildID)
 
 	go func() {
-		err := player.Connect(event.Session, voiceChannelID, event.Data.ChannelID)
+		err := player.Connect(event.Session, channel.ID, event.Data.ChannelID)
 
 		if err != nil {
 			event.RespondUpdateMsg(err.Error())
 			return
 		}
 
-		event.RespondUpdateMsg("Connected to: " + voiceChannel.Name)
+		event.RespondUpdateMsg(fmt.Sprintf("Connected to %s", channel.Mention()))
 	}()
 }
 
 func onDisconnect(event *Event) {
 	event.RespondLater()
 
-	guildID := event.Data.Interaction.GuildID
-	player := music.GetGuildPlayer(guildID)
+	player := music.GetGuildPlayer(event.Data.Interaction.GuildID)
 
 	go func() {
 		err := player.Disconnect()
