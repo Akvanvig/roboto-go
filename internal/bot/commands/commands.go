@@ -72,6 +72,12 @@ type Command = CommandOption
 
 type CommandConverter func(cmd *Command)
 
+type CommandGroupSettings struct {
+	DefaultMemberPermissions *int64
+	DMPermission             *bool
+	NSFW                     *bool
+}
+
 type Event struct {
 	Session    *discordgo.Session                                   // Discord session
 	Command    *Command                                             // Command triggering the event
@@ -125,14 +131,14 @@ func _convertCommandOptions(parentKey string, options []CommandOption, converter
 		if cmd.Type == discordgo.ApplicationCommandOptionSubCommandGroup || cmd.Type == discordgo.ApplicationCommandOptionSubCommand {
 			if strings.Contains(cmd.Name, " ") {
 				log.Warn().Msg(fmt.Sprintf(
-					"Chat subcommand of type '%d' can't have 'Name' with spaces in it. Ignoring command '%s' from file group '%s'",
+					"Chat subcommand of type '%d' can't have 'Name' with spaces in it. Ignoring command '%s' in file group '%s'",
 					cmd.Type, cmd.Name, parentKey))
 				continue
 			}
 
 			if cmd.Description == "" {
 				log.Warn().Msg(fmt.Sprintf(
-					"Chat subcommand of type '%d' must have a 'Description'. Ignoring command '%s' from file group '%s'",
+					"Chat subcommand of type '%d' must have a 'Description'. Ignoring command '%s' in file group '%s'",
 					cmd.Type, cmd.Name, parentKey))
 				continue
 			}
@@ -170,27 +176,27 @@ func _convertCommandOptions(parentKey string, options []CommandOption, converter
 	return optionsConverted[:validNum]
 }
 
-func _createContextCommands(commands []Command, callerName string, contextType discordgo.ApplicationCommandType, converters ...CommandConverter) {
+func _createContextCommands(settings *CommandGroupSettings, commands []Command, callerName string, contextType discordgo.ApplicationCommandType, converters ...CommandConverter) {
 	for i := 0; i < len(commands); i++ {
 		cmd := &commands[i]
 
 		if cmd.Name == "" {
 			log.Warn().Msg(fmt.Sprintf(
-				"A command is missing a 'Name' field. Ignoring command at the index '%d' from file '%s'",
+				"A command is missing a 'Name' field. Ignoring command at the index '%d' in file group '%s'",
 				i, callerName))
 			continue
 		}
 
 		if cmd.Type != 0 {
 			log.Warn().Msg(fmt.Sprintf(
-				"Click context command of type '%d' can't have a set subtype. Ignoring set value on command '%s' in the '%s' category",
+				"Click context command of type '%d' can't have a set subtype. Ignoring set value on command '%s' in file group '%s'",
 				contextType, cmd.Name, callerName))
 			cmd.Type = 0
 		}
 
 		if cmd.Description != "" || cmd.DescriptionLocalizations != nil {
 			log.Warn().Msg(fmt.Sprintf(
-				"Click context command of type '%d' can't have a description. Ignoring set value on command '%s' from file '%s'",
+				"Click context command of type '%d' can't have a description. Ignoring set value on command '%s' in file group '%s'",
 				cmd.Type, cmd.Name, callerName))
 			cmd.Description = ""
 			cmd.DescriptionLocalizations = nil
@@ -198,7 +204,7 @@ func _createContextCommands(commands []Command, callerName string, contextType d
 
 		if cmd.Options != nil {
 			log.Warn().Msg(fmt.Sprintf(
-				"Click context command of type '%d' can't contain options array. Ignoring set value on command '%s' from file '%s'",
+				"Click context command of type '%d' can't contain options array. Ignoring set value on command '%s' in file group '%s'",
 				cmd.Type, cmd.Name, callerName))
 			cmd.Options = nil
 		}
@@ -210,13 +216,20 @@ func _createContextCommands(commands []Command, callerName string, contextType d
 			converters[j](cmd)
 		}
 
-		allCommands[key] = *cmd
-		// ToDo(Fredrico):
-		// This should probably set more options
-		allCommandsRaw = append(allCommandsRaw, &discordgo.ApplicationCommand{
+		// Create topmost command
+		cmdRaw := &discordgo.ApplicationCommand{
 			Name: cmd.Name,
 			Type: contextType,
-		})
+		}
+
+		if settings != nil {
+			cmdRaw.DefaultMemberPermissions = settings.DefaultMemberPermissions
+			cmdRaw.DMPermission = settings.DMPermission
+			cmdRaw.NSFW = settings.NSFW
+		}
+
+		allCommands[key] = *cmd
+		allCommandsRaw = append(allCommandsRaw, cmdRaw)
 	}
 }
 
@@ -278,54 +291,66 @@ func (event *Event) RespondUpdateMsg(msg string) error {
 }
 
 func (event *Event) RespondUpdateMsgLog(msg string) error {
-	var userNameFull string
+	var username string
 	uuid := uuid.New().String()
 
 	if event.Data.Member != nil {
-		userNameFull = event.Data.Interaction.Member.User.Username + "#" + event.Data.Member.User.Discriminator
+		username = fmt.Sprintf("%s#%s", event.Data.Interaction.Member.User.Username, event.Data.Interaction.Member.User.Discriminator)
 
 	} else {
-		userNameFull = event.Data.Interaction.User.Username + "#" + event.Data.Interaction.User.Discriminator
+		username = fmt.Sprintf("%s#%s", event.Data.Interaction.User.Username, event.Data.Interaction.User.Discriminator)
 	}
 
-	log.Info().Str("username", userNameFull).Str("uuid", uuid).Msg(msg)
+	log.Info().Str("username", username).Str("uuid", uuid).Msg(msg)
 
 	return event.RespondUpdateMsg(msg)
 }
 
-func CreateUserCommands(commands []Command, converters ...CommandConverter) {
+func CreateUserCommands(settings *CommandGroupSettings, commands []Command, converters ...CommandConverter) {
 	callerName := util.GetCallingFuncFileName()
-	_createContextCommands(commands, callerName, discordgo.UserApplicationCommand, converters...)
+	_createContextCommands(settings, commands, callerName, discordgo.UserApplicationCommand, converters...)
 }
 
-func CreateMessageCommands(commands []Command, converters ...CommandConverter) {
+func CreateMessageCommands(settings *CommandGroupSettings, commands []Command, converters ...CommandConverter) {
 	callerName := util.GetCallingFuncFileName()
-	_createContextCommands(commands, callerName, discordgo.MessageApplicationCommand, converters...)
+	_createContextCommands(settings, commands, callerName, discordgo.MessageApplicationCommand, converters...)
 }
 
-func CreateChatCommands(commands []Command, converters ...CommandConverter) {
+func CreateChatCommands(settings *CommandGroupSettings, commands []Command, converters ...CommandConverter) {
 	callerName := util.GetCallingFuncFileName()
 
+	// Correction invalid top types
 	for i := 0; i < len(commands); i++ {
 		cmd := &commands[i]
 
-		if cmd.Type != discordgo.ApplicationCommandOptionSubCommandGroup && cmd.Type != discordgo.ApplicationCommandOptionSubCommand {
-			if cmd.Type != 0 {
-				log.Warn().Msg(fmt.Sprintf(
-					"Chat command type always has to be set to 'ApplicationCommandOptionSubCommandGroup' or 'ApplicationCommandOptionSubCommand' at the top level. Forcefully correcting type on command '%s' in the '%s' category",
-					cmd.Name, callerName))
-			}
-
-			cmd.Type = discordgo.ApplicationCommandOptionSubCommand
+		if cmd.Type == discordgo.ApplicationCommandOptionSubCommandGroup || cmd.Type == discordgo.ApplicationCommandOptionSubCommand {
+			continue
 		}
+
+		if cmd.Type != 0 {
+			log.Warn().Msg(fmt.Sprintf(
+				"Chat command type always has to be a subcommand or subcommand group at the top level. Forcefully correcting type on command '%s' in file group '%s'",
+				cmd.Name, callerName))
+		}
+
+		cmd.Type = discordgo.ApplicationCommandOptionSubCommand
 	}
 
-	allCommandsRaw = append(allCommandsRaw, &discordgo.ApplicationCommand{
+	// Create topmost command
+	cmdRaw := &discordgo.ApplicationCommand{
 		Name:        callerName,
 		Type:        discordgo.ChatApplicationCommand,
 		Description: fmt.Sprintf("Commands belonging to the %s category", callerName),
 		Options:     _convertCommandOptions(callerName, commands, converters...),
-	})
+	}
+
+	if settings != nil {
+		cmdRaw.DefaultMemberPermissions = settings.DefaultMemberPermissions
+		cmdRaw.DMPermission = settings.DMPermission
+		cmdRaw.NSFW = settings.NSFW
+	}
+
+	allCommandsRaw = append(allCommandsRaw, cmdRaw)
 }
 
 func Sync(s *discordgo.Session) error {

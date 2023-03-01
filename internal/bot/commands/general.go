@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	CreateChatCommands([]Command{
+	CreateChatCommands(nil, []Command{
 		{
 			Name:        "catjam",
 			Description: "Let's jam!",
@@ -28,7 +28,7 @@ func init() {
 		},
 	})
 	/*
-		CreateUserCommands([]Command{
+		CreateUserCommands(nil, []Command{
 			{
 				Name: "OPEEEN UP",
 				Handler: &CommandHandler{
@@ -38,7 +38,7 @@ func init() {
 			},
 		})
 
-		CreateMessageCommands([]Command{
+		CreateMessageCommands(nil, []Command{
 			{
 				Name: "CHECK THIS OUT",
 				Handler: &CommandHandler{

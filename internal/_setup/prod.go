@@ -12,15 +12,13 @@ import (
 )
 
 func init() {
+	// Setup Logger
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
-	// Note(Fredrico):
-	// In dev, we set RootPath to be the executable's directory
+	// Setup RootPath
 	execPath, err := os.Executable()
-
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to find running executable path")
 	}
-
 	util.RootPath = filepath.Dir(execPath)
 }

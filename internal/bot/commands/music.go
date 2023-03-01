@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -13,20 +12,24 @@ func init() {
 	var (
 		minVolume = 0.0
 		maxVolume = 200.0
+		allowDM   = false
 	)
 
-	// Set common properties for all created commands
-	converter := func(cmd *Command) {
-		cmd.Handler.OnRunCheck = func(event *Event) error {
-			if event.Data.Interaction.Member == nil {
-				return errors.New("You can't play a song in a DM")
+	/*
+		converter := func(cmd *Command) {
+			cmd.Handler.OnRunCheck = func(event *Event) error {
+				if event.Data.Interaction.Member == nil {
+					return errors.New("You can't play a song in a DM")
+				}
+
+				return nil
 			}
-
-			return nil
 		}
-	}
+	*/
 
-	CreateChatCommands([]Command{
+	CreateChatCommands(&CommandGroupSettings{
+		DMPermission: &allowDM,
+	}, []Command{
 		{
 			Name:        "connect",
 			Description: "Connect the bot to a voice channel",
@@ -110,7 +113,7 @@ func init() {
 				OnRun: onQueue,
 			},
 		},
-	}, converter)
+	})
 }
 
 func onConnect(event *Event) {
