@@ -22,6 +22,8 @@ func GetCallingFuncFileName() string {
 	return fileName
 }
 
+// Note(Fredrico):
+// See https://github.com/golang/go/issues/46345
 func SendOSInterruptSignal() {
 	pid := syscall.Getpid()
 
@@ -31,11 +33,11 @@ func SendOSInterruptSignal() {
 		if err != nil {
 			os.Exit(1)
 		}
-		process, err := dll.FindProc("GenerateConsoleCtrlEvent")
+		procedure, err := dll.FindProc("GenerateConsoleCtrlEvent")
 		if err != nil {
 			os.Exit(1)
 		}
-		result, _, _ := process.Call(syscall.CTRL_BREAK_EVENT, uintptr(pid))
+		result, _, _ := procedure.Call(syscall.CTRL_BREAK_EVENT, uintptr(pid))
 		if result == 0 {
 			os.Exit(1)
 		}
