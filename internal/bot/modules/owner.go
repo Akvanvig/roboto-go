@@ -2,10 +2,10 @@ package modules
 
 import (
 	"errors"
-	"os"
 	"strings"
 
 	. "github.com/Akvanvig/roboto-go/internal/bot/lib/commands"
+	"github.com/Akvanvig/roboto-go/internal/util"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -82,7 +82,7 @@ func onOwnerRunCommand(event *Event) {
 
 	case "shutdown":
 		event.RespondMsg("Shutting down", discordgo.MessageFlagsEphemeral)
-		os.Exit(0)
+		util.SendOSInterruptSignal()
 	case "help":
 		fallthrough
 	default:
