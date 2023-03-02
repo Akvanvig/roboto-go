@@ -11,7 +11,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func init() {
+func setupBase() {
 	// Setup Logger
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 

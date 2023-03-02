@@ -10,24 +10,20 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const (
-	ResponsePong           = discordgo.InteractionResponsePong
-	ResponseMsg            = discordgo.InteractionResponseChannelMessageWithSource
-	ResponseMsgLater       = discordgo.InteractionResponseDeferredChannelMessageWithSource
-	ResponseMsgUpdate      = discordgo.InteractionResponseUpdateMessage
-	ResponseMsgUpdateLater = discordgo.InteractionResponseDeferredMessageUpdate
-	ResponseAutoComplete   = discordgo.InteractionApplicationCommandAutocompleteResult
-	ResponseModal          = discordgo.InteractionResponseModal
-)
+const ResponsePong = discordgo.InteractionResponsePong
+const ResponseMsg = discordgo.InteractionResponseChannelMessageWithSource
+const ResponseMsgLater = discordgo.InteractionResponseDeferredChannelMessageWithSource
+const ResponseMsgUpdate = discordgo.InteractionResponseUpdateMessage
+const ResponseMsgUpdateLater = discordgo.InteractionResponseDeferredMessageUpdate
+const ResponseAutoComplete = discordgo.InteractionApplicationCommandAutocompleteResult
+const ResponseModal = discordgo.InteractionResponseModal
 
 var allCommandsRaw = []*discordgo.ApplicationCommand{}
 var allCommands = map[string]CommandOption{}
 
-type (
-	Response           = discordgo.InteractionResponse
-	ResponseData       = discordgo.InteractionResponseData
-	ResponseDataUpdate = discordgo.WebhookEdit
-)
+type Response = discordgo.InteractionResponse
+type ResponseData = discordgo.InteractionResponseData
+type ResponseDataUpdate = discordgo.WebhookEdit
 
 type CommandOption struct {
 	Type                     discordgo.ApplicationCommandOptionType
@@ -188,7 +184,6 @@ func Sync(s *discordgo.Session) error {
 	{
 		// Fetch existing commands
 		commandsExisting, err := s.ApplicationCommands(s.State.User.ID, "")
-
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to fetch existing commands")
 			return err
@@ -197,7 +192,6 @@ func Sync(s *discordgo.Session) error {
 		// Delete commands out of sync
 		for _, cmd := range commandsExisting {
 			deleteCommand := true
-
 			for _, cmdTmp := range allCommandsRaw {
 				if cmd.Name == cmdTmp.Name {
 					deleteCommand = false
@@ -210,7 +204,6 @@ func Sync(s *discordgo.Session) error {
 			}
 
 			err = s.ApplicationCommandDelete(s.State.User.ID, "", cmd.ID)
-
 			if err != nil {
 				log.Error().Msg("Failed to delete an out of sync command")
 				return err
@@ -221,7 +214,6 @@ func Sync(s *discordgo.Session) error {
 	{
 		// Bulk creation of commands
 		_, err := s.ApplicationCommandBulkOverwrite(s.State.User.ID, "", allCommandsRaw)
-
 		if err != nil {
 			log.Fatal().Err(err).Msg("Failed to create commands")
 			return err
@@ -278,7 +270,7 @@ func Process(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			// If check fails, respond with error
 			err = cmd.Handler.OnRunCheck(&event)
 			if err != nil {
-				event.RespondMsg(err.Error())
+				event.RespondMsg(err.Error(), discordgo.MessageFlagsEphemeral)
 				return
 			}
 		}
@@ -305,5 +297,5 @@ func Process(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	event.RespondMsg("An internal error occured")
+	event.RespondMsg("An internal error occured", discordgo.MessageFlagsEphemeral)
 }

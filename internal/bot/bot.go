@@ -50,10 +50,9 @@ func onVoiceStateUpdate(s *discordgo.Session, st *discordgo.VoiceStateUpdate) {
 func Start(token *string) {
 	var err error
 
-	session, err = discordgo.New("Bot " + *token)
-
 	// Note(Fredrico):
 	// It's worth mentioning that discordgo does not check if the parameters are valid yet
+	session, err = discordgo.New("Bot " + *token)
 	if err != nil {
 		log.Fatal().Str("message", "Invalid bot parameters").Err(err).Send()
 	}
@@ -64,13 +63,11 @@ func Start(token *string) {
 	//session.AddHandler(onAuditlog)
 
 	err = session.Open()
-
 	if err != nil {
-		log.Fatal().Err(err).Msg("Cannot open a session")
+		log.Fatal().Err(err).Msg("Unable to open a session")
 	}
 
 	err = commands.Sync(session)
-
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed synchronization step")
 	}
@@ -83,7 +80,6 @@ func Stop() {
 
 	if session != nil {
 		err := session.Close()
-
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to close the session properly")
 		}

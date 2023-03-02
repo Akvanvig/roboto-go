@@ -29,7 +29,7 @@ func init() {
 		},
 	})
 	/*
-		CreateUserCommands(nil, []Command{
+		InitChatCommands(nil, []Command{
 			{
 				Name: "OPEEEN UP",
 				Handler: &CommandHandler{
@@ -39,7 +39,7 @@ func init() {
 			},
 		})
 
-		CreateMessageCommands(nil, []Command{
+		InitChatCommands(nil, []Command{
 			{
 				Name: "CHECK THIS OUT",
 				Handler: &CommandHandler{

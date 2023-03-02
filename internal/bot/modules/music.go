@@ -39,7 +39,10 @@ func init() {
 					Type:        discordgo.ApplicationCommandOptionChannel,
 					Name:        "channel",
 					Description: "The voice channel",
-					Required:    true,
+					ChannelTypes: []discordgo.ChannelType{
+						discordgo.ChannelTypeGuildVoice,
+					},
+					Required: true,
 				},
 			},
 			Handler: &CommandHandler{
@@ -120,13 +123,8 @@ func init() {
 func onConnect(event *Event) {
 	event.RespondLater()
 
-	channel := event.Options[0].ChannelValue(event.Session)
-	if channel.Type != discordgo.ChannelTypeGuildVoice {
-		event.RespondUpdateMsg(fmt.Sprintf("%s is not a voice channel", channel.Mention()))
-		return
-	}
-
 	player := music.GetGuildPlayer(event.Data.Interaction.GuildID)
+	channel := event.Options[0].ChannelValue(event.Session)
 
 	go func() {
 		err := player.Connect(event.Session, channel.ID, event.Data.ChannelID)

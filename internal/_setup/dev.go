@@ -14,7 +14,7 @@ import (
 	_ "net/http/pprof"
 )
 
-func init() {
+func setupBase() {
 	// Setup Logger
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
