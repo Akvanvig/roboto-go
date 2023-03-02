@@ -11,13 +11,14 @@ import (
 
 func init() {
 	ownerCheck := func(event *Event) error {
+		app, _ := event.Session.Application("@me")
 		user := event.Data.User
 		if user == nil {
 			user = event.Data.Member.User
 		}
 
 		// Check if calling user is a owner
-		for _, member := range fetchAppTeam(event.Session).Members {
+		for _, member := range app.Team.Members {
 			if user.ID == member.User.ID {
 				return nil
 			}
@@ -46,37 +47,38 @@ func init() {
 	})
 }
 
-func fetchAppTeam(session *discordgo.Session) *discordgo.Team {
-	app, _ := session.Application("@me")
-	return app.Team
-}
-
 func onOwnerRunCommand(event *Event) {
 	commandToRun := event.Options[0].StringValue()
+	commandToRun = strings.Trim(commandToRun, " ")
 	commandToRun = strings.ToLower(commandToRun)
 
 	switch commandToRun {
-	case "team":
-		var builder strings.Builder
-		team := fetchAppTeam(event.Session)
-
-		builder.WriteString("Team Info:\n```Name: ")
-		builder.WriteString(team.Name)
-		if team.Description != "" {
-			builder.WriteString("\nDescription: ")
-			builder.WriteString(team.Description)
+	case "info":
+		app, _ := event.Session.Application("@me")
+		team := app.Team
+		members := make([]string, len(team.Members))
+		for i := 0; i < len(members); i++ {
+			members[i] = team.Members[i].User.Mention()
 		}
-		builder.WriteString("\nMembers: ")
-		for i := 0; i < len(team.Members); i++ {
-			user := team.Members[i].User
-			builder.WriteString("\n- ")
-			builder.WriteString(user.Username)
-			builder.WriteString("#")
-			builder.WriteString(user.Discriminator)
-		}
-		builder.WriteString("```")
 
-		event.RespondMsg(builder.String(), discordgo.MessageFlagsEphemeral)
+		event.Respond(&Response{
+			Type: ResponseMsg,
+			Data: &ResponseData{
+				Embeds: []*discordgo.MessageEmbed{
+					{
+						Title:       "Application Information",
+						Description: app.Description,
+						Fields: []*discordgo.MessageEmbedField{
+							{
+								Name:  "Team Members",
+								Value: strings.Join(members, "\n"),
+							},
+						},
+					},
+				},
+				Flags: discordgo.MessageFlagsEphemeral,
+			},
+		})
 
 	case "shutdown":
 		event.RespondMsg("Shutting down", discordgo.MessageFlagsEphemeral)
@@ -86,12 +88,21 @@ func onOwnerRunCommand(event *Event) {
 	default:
 		var builder strings.Builder
 
-		builder.WriteString("Valid owner commands:\n```")
-		builder.WriteString("\n- team: Display the application's team info")
-		builder.WriteString("\n- shutdown: Shutdown the application")
-		builder.WriteString("\n- help: Display the help menu")
-		builder.WriteString("```")
+		builder.WriteString("- **info**: Display information about the application\n")
+		builder.WriteString("- **shutdown**: Shutdown the application\n")
+		builder.WriteString("- **help**: Display the help menu")
 
-		event.RespondMsg(builder.String(), discordgo.MessageFlagsEphemeral)
+		event.Respond(&Response{
+			Type: ResponseMsg,
+			Data: &ResponseData{
+				Embeds: []*discordgo.MessageEmbed{
+					{
+						Title:       "Valid Commands",
+						Description: builder.String(),
+					},
+				},
+				Flags: discordgo.MessageFlagsEphemeral,
+			},
+		})
 	}
 }

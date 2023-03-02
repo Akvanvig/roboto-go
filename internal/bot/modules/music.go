@@ -227,12 +227,19 @@ func onQueue(event *Event) {
 			event.RespondUpdateMsg(err.Error())
 			return
 		}
-
 		if len(queue) == 0 {
 			event.RespondUpdateMsg("The queue is empty")
-		} else {
-			event.RespondUpdateMsg("```" + strings.Join(queue, "\n") + "```")
+			return
 		}
+
+		event.RespondUpdate(&ResponseDataUpdate{
+			Embeds: &[]*discordgo.MessageEmbed{
+				{
+					Title:       "Video Queue",
+					Description: strings.Join(queue, "\n"),
+				},
+			},
+		})
 	}()
 }
 
