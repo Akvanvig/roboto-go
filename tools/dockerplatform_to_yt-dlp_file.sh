@@ -8,7 +8,7 @@ case $1 in
     echo "yt-dlp_linux"
     ;;
 
-  linux/arm32v7)
+  linux/arm/v7)
     echo "yt-dlp_linux_armv7l"
     ;;
 
@@ -17,7 +17,7 @@ case $1 in
     ;;
 
   *)
-    echo "$0 IS AN UNSUPPORTED PLATFORM" >&2
+    echo "$1 IS AN UNSUPPORTED PLATFORM" >&2
     exit 1
     ;;
 esac
