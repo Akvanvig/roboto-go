@@ -18,7 +18,7 @@ RUN CGO_ENABLED=1 go build -ldflags="-w -s" -o /out/ ./...
 
 FROM alpine:3 AS roboto-downloader
 ARG TARGETPLATFORM
-# Download latest yt-dlp for aarch64
+# Download latest yt-dlp for target platform
 COPY ./tools/dockerplatform_to_yt-dlp_file.sh /tools/script.sh
 RUN apk add --no-cache curl
 RUN YT_DLP=$(/bin/sh /tools/script.sh ${TARGETPLATFORM}) && curl https://github.com/yt-dlp/yt-dlp/releases/latest/download/${YT_DLP} --create-dirs -o /out/yt-dlp

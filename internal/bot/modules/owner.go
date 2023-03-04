@@ -2,6 +2,7 @@ package modules
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	. "github.com/Akvanvig/roboto-go/internal/bot/lib/commands"
@@ -48,9 +49,16 @@ func init() {
 }
 
 func onOwnerRunCommand(event *Event) {
-	commandToRun := event.Options[0].StringValue()
+	input := strings.SplitN(event.Options[0].StringValue(), " ", 2)
+	arg := ""
+
+	commandToRun := input[0]
 	commandToRun = strings.Trim(commandToRun, " ")
 	commandToRun = strings.ToLower(commandToRun)
+
+	if len(input) > 1 {
+		arg = input[1]
+	}
 
 	switch commandToRun {
 	case "info":
@@ -79,7 +87,30 @@ func onOwnerRunCommand(event *Event) {
 				Flags: discordgo.MessageFlagsEphemeral,
 			},
 		})
+	case "announce":
+		if arg == "" {
+			event.RespondMsg("Can't send an empty announcement", discordgo.MessageFlagsEphemeral)
+			break
+		}
 
+		sender := event.Data.User
+		if sender == nil {
+			sender = event.Data.Member.User
+		}
+
+		app, _ := event.Session.Application("@me")
+		members := app.Team.Members
+
+		for i := 0; i < len(members); i++ {
+			user := members[i].User
+			dm, err := event.Session.UserChannelCreate(user.ID)
+
+			if err == nil {
+				event.Session.ChannelMessageSend(dm.ID, fmt.Sprintf("%s - %s", arg, sender.Mention()))
+			}
+		}
+
+		event.RespondMsg("Announcement sent", discordgo.MessageFlagsEphemeral)
 	case "shutdown":
 		event.RespondMsg("Shutting down", discordgo.MessageFlagsEphemeral)
 		util.SendOSInterruptSignal()
@@ -89,6 +120,7 @@ func onOwnerRunCommand(event *Event) {
 		var builder strings.Builder
 
 		builder.WriteString("- **info**: Display information about the application\n")
+		builder.WriteString("- **announce**: Announce a message to all team members\n")
 		builder.WriteString("- **shutdown**: Shutdown the application\n")
 		builder.WriteString("- **help**: Display the help menu")
 
