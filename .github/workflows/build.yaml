@@ -16,6 +16,18 @@ permissions:
   packages: write
 
 jobs:
+  audit-project:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest:
+    steps:
+    # https://github.com/marketplace/actions/checkout
+    - name: Checkout
+      uses: actions/checkout@v3
+    # https://github.com/marketplace/actions/anchore-container-scan
+    - name: Scan project
+      uses: anchore/scan-action@v3
+      with:
+        path: "."
   build-image:
     runs-on: ubuntu-latest
     steps:
@@ -55,7 +67,6 @@ jobs:
         context: .
         file: build/package/docker/Dockerfile
         platforms: 'linux/arm/v7,linux/arm64,linux/amd64'
-        #push: ${{ ( github.event_name == 'push' && github.ref_name == 'v*' ) || github.event_name == 'workflow_dispatch' }}
         push: true
         tags: ${{ steps.metadata.outputs.tags }}
         labels: ${{ steps.metadata.outputs.labels }}
