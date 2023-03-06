@@ -5,6 +5,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/rs/zerolog/log"
@@ -13,6 +14,7 @@ import (
 var allCommandsRaw = []*discordgo.ApplicationCommand{}
 var allCommands = map[string]CommandOption{}
 var allCachedResponseData = map[string]ResponseData{}
+var mutexCache = sync.RWMutex{}
 
 type Event struct {
 	Session *discordgo.Session           // Discord session
@@ -95,7 +97,9 @@ func (event *Event) ParseModalData() (func(*ModalEvent), *ModalEvent) {
 	data := event.Data.Interaction.ModalSubmitData()
 	key := data.CustomID
 
+	mutexCache.RLock()
 	responseData, ok := allCachedResponseData[key]
+	mutexCache.RUnlock()
 	if !ok {
 		return nil, nil
 	}
@@ -121,7 +125,9 @@ func (event *Event) ParseComponentData() (func(*ComponentEvent), *ComponentEvent
 	args := strings.Split(data.CustomID, "_")
 	key := fmt.Sprintf("%s_%s", args[0], args[1])
 
+	mutexCache.RLock()
 	responseData, ok := allCachedResponseData[key]
+	mutexCache.RUnlock()
 	if !ok {
 		return nil, nil
 	}

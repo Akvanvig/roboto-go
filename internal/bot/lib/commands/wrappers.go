@@ -257,10 +257,14 @@ func (data *ResponseData) ConvertToOriginal(type_ discordgo.InteractionResponseT
 			components[i] = data.Actions[i].ConvertToOriginal(i, id)
 		}
 
+		mutexCache.RLock()
 		_, ok := allCachedResponseData[id]
+		mutexCache.RUnlock()
 		if !ok {
 			log.Debug().Msg(fmt.Sprintf("Cached response data for '%+v' using the ID '%s'", data, id))
+			mutexCache.Lock()
 			allCachedResponseData[id] = *data
+			mutexCache.Unlock()
 		}
 
 		if type_ == ResponseModal {
@@ -302,13 +306,17 @@ func (data *ResponseDataUpdate) ConvertToOriginal() *discordgo.WebhookEdit {
 			components[i] = (*data.Actions)[i].ConvertToOriginal(i, id)
 		}
 
+		mutexCache.RLock()
 		_, ok := allCachedResponseData[id]
+		mutexCache.RUnlock()
 		if !ok {
 			log.Debug().Msg(fmt.Sprintf("Cached response data for '%+v' using the ID '%s'", data, id))
+			mutexCache.Lock()
 			allCachedResponseData[id] = ResponseData{
 				Actions: *data.Actions,
 				Handler: data.Handler,
 			}
+			mutexCache.Unlock()
 		}
 	}
 
