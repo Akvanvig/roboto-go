@@ -3,91 +3,50 @@ package commands
 import (
 	"fmt"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
 
-const ResponsePong = discordgo.InteractionResponsePong
-const ResponseMsg = discordgo.InteractionResponseChannelMessageWithSource
-const ResponseMsgLater = discordgo.InteractionResponseDeferredChannelMessageWithSource
-const ResponseMsgUpdate = discordgo.InteractionResponseUpdateMessage
-const ResponseMsgUpdateLater = discordgo.InteractionResponseDeferredMessageUpdate
-const ResponseAutoComplete = discordgo.InteractionApplicationCommandAutocompleteResult
-const ResponseModal = discordgo.InteractionResponseModal
-
 var allCommandsRaw = []*discordgo.ApplicationCommand{}
 var allCommands = map[string]CommandOption{}
-
-type Response = discordgo.InteractionResponse
-type ResponseData = discordgo.InteractionResponseData
-type ResponseDataUpdate = discordgo.WebhookEdit
-
-type CommandOption struct {
-	Type                     discordgo.ApplicationCommandOptionType
-	Name                     string
-	NameLocalizations        map[discordgo.Locale]string
-	Description              string
-	DescriptionLocalizations map[discordgo.Locale]string
-
-	ChannelTypes []discordgo.ChannelType
-	Required     bool
-	Options      []CommandOption
-
-	// NOTE: mutually exclusive with Choices.
-	Autocomplete bool
-	Choices      []*discordgo.ApplicationCommandOptionChoice
-	// Minimal value of number/integer option.
-	MinValue *float64
-	// Maximum value of number/integer option.
-	MaxValue float64
-	// Minimum length of string option.
-	MinLength *int
-	// Maximum length of string option.
-	MaxLength int
-
-	// Event handlers
-	Handler *CommandHandler
-	// Full command key
-	key string
-}
-
-type CommandHandler struct {
-	// Check handler
-	OnRunCheck func(*Event) error
-	// Event handler
-	OnRun func(*Event)
-	// Modal event handler
-	OnModalSubmit func(*Event)
-}
-
-type Command = CommandOption
-
-type CommandConverter func(cmd *Command)
-
-type CommandGroupSettings struct {
-	DefaultMemberPermissions *int64
-	DMPermission             *bool
-	NSFW                     *bool
-}
+var allCachedResponseData = map[string]ResponseData{}
 
 type Event struct {
-	Session    *discordgo.Session                                   // Discord session
-	Command    *Command                                             // Command triggering the event
-	Data       *discordgo.InteractionCreate                         // Event data
-	Options    []*discordgo.ApplicationCommandInteractionDataOption // Extracted options from the event data
-	Components []discordgo.MessageComponent                         // Extracted components from the event data
+	Session *discordgo.Session           // Discord session
+	Data    *discordgo.InteractionCreate // Event data
 }
 
-// ToDo(Fredrico):
-// Rename the function and perhaps try to make it have more sensible parameters
-func _parseRawCommandInteractionData(data *discordgo.ApplicationCommandInteractionData) (string, []*discordgo.ApplicationCommandInteractionDataOption) {
+type CommandEvent struct {
+	Event
+	Command *CommandOption                                       // Command triggering the event
+	Options []*discordgo.ApplicationCommandInteractionDataOption // Extracted options from the event data
+}
+
+type ModalEvent struct {
+	Event
+	Actions []ActionsRow // Extracted components from the event data
+}
+
+type ComponentEvent struct {
+	Event
+	Component         *MessageComponent
+	SelectionResolved *MessageComponenResolved
+	SelectionValues   []string
+}
+
+func (event *Event) ParseCommandData() (func(*CommandEvent), *CommandEvent) {
+	if event.Data.Interaction.Type != discordgo.InteractionApplicationCommand {
+		return nil, nil
+	}
+
+	data := event.Data.Interaction.ApplicationCommandData()
+	options := data.Options
 	var builder strings.Builder
 	builder.WriteString(data.Name)
 
-	options := data.Options
 	for {
 		if len(options) == 0 {
 			break
@@ -102,11 +61,91 @@ func _parseRawCommandInteractionData(data *discordgo.ApplicationCommandInteracti
 		options = option.Options
 	}
 
-	return builder.String(), options
+	key := builder.String()
+	cmd, ok := allCommands[key]
+	if !ok {
+		cmd, ok = allCommands[fmt.Sprintf("clickcontext_%s", key)]
+		if !ok {
+			return nil, nil
+		}
+	}
+
+	tmpEvent := &CommandEvent{
+		Event:   *event,
+		Command: &cmd,
+		Options: options,
+	}
+
+	if cmd.Handler.OnRunCheck != nil {
+		err := cmd.Handler.OnRunCheck(tmpEvent)
+		if err != nil {
+			event.RespondMsg(err.Error(), discordgo.MessageFlagsEphemeral)
+			return nil, nil
+		}
+	}
+
+	return cmd.Handler.OnRun, tmpEvent
+}
+
+func (event *Event) ParseModalData() (func(*ModalEvent), *ModalEvent) {
+	if event.Data.Interaction.Type != discordgo.InteractionModalSubmit {
+		return nil, nil
+	}
+
+	data := event.Data.Interaction.ModalSubmitData()
+	key := data.CustomID
+
+	responseData, ok := allCachedResponseData[key]
+	if !ok {
+		return nil, nil
+	}
+	if responseData.Handler == nil {
+		return nil, nil
+	}
+	if responseData.Handler.OnModalSubmit == nil {
+		return nil, nil
+	}
+
+	return responseData.Handler.OnModalSubmit, &ModalEvent{
+		Event:   *event,
+		Actions: responseData.Actions,
+	}
+}
+
+func (event *Event) ParseComponentData() (func(*ComponentEvent), *ComponentEvent) {
+	if event.Data.Interaction.Type != discordgo.InteractionMessageComponent {
+		return nil, nil
+	}
+
+	data := event.Data.Interaction.MessageComponentData()
+	args := strings.Split(data.CustomID, "_")
+	key := fmt.Sprintf("%s_%s", args[0], args[1])
+
+	responseData, ok := allCachedResponseData[key]
+	if !ok {
+		return nil, nil
+	}
+	if responseData.Handler == nil {
+		return nil, nil
+	}
+	if responseData.Handler.OnComponentSubmit == nil {
+		return nil, nil
+	}
+
+	rowIndex, _ := strconv.Atoi(args[2])
+	componentIndex, _ := strconv.Atoi(args[3])
+	component := responseData.Actions[rowIndex].Components[componentIndex]
+
+	return responseData.Handler.OnComponentSubmit, &ComponentEvent{
+		Event:             *event,
+		Component:         &component,
+		SelectionResolved: &data.Resolved,
+		SelectionValues:   data.Values,
+	}
 }
 
 func (event *Event) Respond(response *Response) error {
-	err := event.Session.InteractionRespond(event.Data.Interaction, response)
+	err := event.Session.InteractionRespond(event.Data.Interaction, response.ConvertToOriginal())
 
 	if err != nil {
 		log.Error().Err(err).Msg("Discord event response failed")
@@ -118,15 +157,6 @@ func (event *Event) Respond(response *Response) error {
 func (event *Event) RespondLater() error {
 	return event.Respond(&Response{
 		Type: ResponseMsgLater,
-	})
-}
-
-func (event *Event) RespondModal(cmd *Command, responseData *ResponseData) error {
-	// Automatically set modal ID to cmd key to enable the handler to work
-	responseData.CustomID = cmd.key
-	return event.Respond(&Response{
-		Type: ResponseModal,
-		Data: responseData,
 	})
 }
 
@@ -151,31 +181,35 @@ func (event *Event) RespondMsg(msg string, flags ...discordgo.MessageFlags) erro
 	})
 }
 
-func (event *Event) RespondUpdate(responseDataUpdate *ResponseDataUpdate) error {
-	_, err := event.Session.InteractionResponseEdit(event.Data.Interaction, responseDataUpdate)
-	return err
-}
-
-func (event *Event) RespondUpdateMsg(msg string) error {
-	return event.RespondUpdate(&ResponseDataUpdate{
-		Content: &msg,
+func (event *Event) RespondModal(data *ResponseData) error {
+	return event.Respond(&Response{
+		Type: ResponseModal,
+		Data: data,
 	})
 }
 
-func (event *Event) RespondUpdateMsgLog(msg string) error {
-	var username string
-	uuid := uuid.New().String()
+func (event *Event) RespondUpdateDirect(data *ResponseData) error {
+	return event.Respond(&Response{
+		Type: ResponseMsgUpdate,
+		Data: data,
+	})
+}
 
-	if event.Data.Member != nil {
-		username = fmt.Sprintf("%s#%s", event.Data.Interaction.Member.User.Username, event.Data.Interaction.Member.User.Discriminator)
+func (event *Event) RespondUpdateDirectMsg(msg string) error {
+	return event.RespondUpdateDirect(&ResponseData{
+		Content: msg,
+	})
+}
 
-	} else {
-		username = fmt.Sprintf("%s#%s", event.Data.Interaction.User.Username, event.Data.Interaction.User.Discriminator)
-	}
+func (event *Event) RespondUpdateLater(data *ResponseDataUpdate) error {
+	_, err := event.Session.InteractionResponseEdit(event.Data.Interaction, data.ConvertToOriginal())
+	return err
+}
 
-	log.Info().Str("username", username).Str("uuid", uuid).Msg(msg)
-
-	return event.RespondUpdateMsg(msg)
+func (event *Event) RespondUpdateLaterMsg(msg string) error {
+	return event.RespondUpdateLater(&ResponseDataUpdate{
+		Content: &msg,
+	})
 }
 
 func Sync(s *discordgo.Session) error {
@@ -242,60 +276,31 @@ func Sync(s *discordgo.Session) error {
 }
 
 func Process(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	var err error
-	event := Event{
+	eventCore := Event{
 		Session: s,
 		Data:    i,
 	}
 
-	switch event.Data.Interaction.Type {
+	switch i.Interaction.Type {
 	case discordgo.InteractionApplicationCommand:
-		data := event.Data.ApplicationCommandData()
-		key, options := _parseRawCommandInteractionData(&data)
-
-		cmd, ok := allCommands[key]
-		if !ok {
-			// If command was not found, check if it's a clickcontext command instead
-			cmd, ok = allCommands[fmt.Sprintf("clickcontext_%s", key)]
-
-			if !ok {
-				break
-			}
+		handler, event := eventCore.ParseCommandData()
+		if handler != nil {
+			handler(event)
+			return
 		}
-
-		event.Command = &cmd
-		event.Options = options
-
-		if cmd.Handler.OnRunCheck != nil {
-			// If check fails, respond with error
-			err = cmd.Handler.OnRunCheck(&event)
-			if err != nil {
-				event.RespondMsg(err.Error(), discordgo.MessageFlagsEphemeral)
-				return
-			}
-		}
-
-		cmd.Handler.OnRun(&event)
-
-		return
-	case discordgo.InteractionMessageComponent:
-		log.Warn().Msg("Received unsupported interaction")
 	case discordgo.InteractionModalSubmit:
-		data := event.Data.ModalSubmitData()
-		key := data.CustomID
-
-		cmd, ok := allCommands[key]
-		if !ok {
-			break
+		handler, event := eventCore.ParseModalData()
+		if handler != nil {
+			handler(event)
+			return
 		}
-
-		event.Command = &cmd
-		event.Components = data.Components
-
-		cmd.Handler.OnModalSubmit(&event)
-
-		return
+	case discordgo.InteractionMessageComponent:
+		handler, event := eventCore.ParseComponentData()
+		if handler != nil {
+			handler(event)
+			return
+		}
 	}
 
-	event.RespondMsg("An internal error occured", discordgo.MessageFlagsEphemeral)
+	eventCore.RespondMsg("An error occurred -> You probably tried to interact with an old event", discordgo.MessageFlagsEphemeral)
 }

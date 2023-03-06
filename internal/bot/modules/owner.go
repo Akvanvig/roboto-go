@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	ownerCheck := func(event *Event) error {
+	ownerCheck := func(event *CommandEvent) error {
 		app, _ := event.Session.Application("@me")
 		user := event.Data.User
 		if user == nil {
@@ -28,7 +28,7 @@ func init() {
 		return errors.New("You are not an owner...")
 	}
 
-	InitChatCommands(nil, []Command{
+	InitChatCommands(nil, []CommandOption{
 		{
 			Name:        "run",
 			Description: "?",
@@ -48,7 +48,7 @@ func init() {
 	})
 }
 
-func onOwnerRunCommand(event *Event) {
+func onOwnerRunCommand(event *CommandEvent) {
 	input := strings.SplitN(event.Options[0].StringValue(), " ", 2)
 	arg := ""
 

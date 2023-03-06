@@ -6,12 +6,11 @@ import (
 
 	. "github.com/Akvanvig/roboto-go/internal/bot/lib/commands"
 	"github.com/Akvanvig/roboto-go/internal/util"
-	"github.com/bwmarrin/discordgo"
 	"github.com/rs/zerolog/log"
 )
 
 func init() {
-	InitChatCommands(nil, []Command{
+	InitChatCommands(nil, []CommandOption{
 		{
 			Name:        "catjam",
 			Description: "Let's jam!",
@@ -20,11 +19,10 @@ func init() {
 			},
 		},
 		{
-			Name:        "game withme",
+			Name:        "gamewithme",
 			Description: "Let's play a game",
 			Handler: &CommandHandler{
-				OnRun:         onGameWithMe,
-				OnModalSubmit: onGameWithMeSubmit,
+				OnRun: onGameWithMe,
 			},
 		},
 	})
@@ -34,7 +32,6 @@ func init() {
 				Name: "OPEEEN UP",
 				Handler: &CommandHandler{
 					OnRun:         onGameWithMe,
-					OnModalSubmit: onGameWithMeSubmit,
 				},
 			},
 		})
@@ -44,14 +41,13 @@ func init() {
 				Name: "CHECK THIS OUT",
 				Handler: &CommandHandler{
 					OnRun:         onGameWithMe,
-					OnModalSubmit: onGameWithMeSubmit,
 				},
 			},
 		})
 	*/
 }
 
-func onCatJam(event *Event) {
+func onCatJam(event *CommandEvent) {
 	file, err := os.Open(filepath.Join(util.RootPath, "assets/img/catjam.gif"))
 
 	if err != nil {
@@ -65,29 +61,66 @@ func onCatJam(event *Event) {
 	event.Respond(&Response{
 		Type: ResponseMsg,
 		Data: &ResponseData{
-			Files: []*discordgo.File{
+			Files: []*File{
 				{
 					ContentType: "image/gif",
 					Name:        "catjam.gif",
 					Reader:      file,
 				},
 			},
+			Actions: []ActionsRow{
+				{
+					Components: []MessageComponent{
+						Button{
+							Label: "Bonk the cat!",
+							Style: DangerButton,
+						},
+					},
+				},
+			},
+			Handler: &ResponseHandler{
+				OnComponentSubmit: onCatBonk,
+			},
+		},
+	})
+}
+
+func onCatBonk(event *ComponentEvent) {
+	event.RespondUpdateDirect(&ResponseData{
+		Content: "OUCH, You bonked me!",
+		Actions: []ActionsRow{
+			{
+				Components: []MessageComponent{
+					Button{
+						Label: "Bonk again?",
+						Style: DangerButton,
+					},
+					Button{
+						Label: "Click me for more funny cats",
+						Style: LinkButton,
+						URL:   "https://www.youtube.com/watch?v=YSHDBB6id4A",
+					},
+				},
+			},
+		},
+		Handler: &ResponseHandler{
+			OnComponentSubmit: onCatBonk,
 		},
 	})
 }
 
 // TODO(Fredrico):
 // This is unfinished
-func onGameWithMe(event *Event) {
-	event.RespondModal(event.Command, &ResponseData{
+func onGameWithMe(event *CommandEvent) {
+	log.Info().Msg("We got here")
+	event.RespondModal(&ResponseData{
 		Title: "A Game",
-		Components: []discordgo.MessageComponent{
-			discordgo.ActionsRow{
-				Components: []discordgo.MessageComponent{
-					discordgo.TextInput{
-						CustomID:    "opinion",
+		Actions: []ActionsRow{
+			{
+				Components: []MessageComponent{
+					TextInput{
 						Label:       "Why do you want to play the game?",
-						Style:       discordgo.TextInputShort,
+						Style:       TextInputShort,
 						Placeholder: "Don't be shy, tell me",
 						Required:    true,
 						MaxLength:   300,
@@ -96,9 +129,12 @@ func onGameWithMe(event *Event) {
 				},
 			},
 		},
+		Handler: &ResponseHandler{
+			OnModalSubmit: onGameWithMeSubmit,
+		},
 	})
 }
 
-func onGameWithMeSubmit(event *Event) {
+func onGameWithMeSubmit(event *ModalEvent) {
 	event.RespondMsg("Thank you for playing!")
 }

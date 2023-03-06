@@ -30,7 +30,7 @@ func init() {
 
 	InitChatCommands(&CommandGroupSettings{
 		DMPermission: &allowDM,
-	}, []Command{
+	}, []CommandOption{
 		{
 			Name:        "connect",
 			Description: "Connect the bot to a voice channel",
@@ -120,7 +120,7 @@ func init() {
 	})
 }
 
-func onConnect(event *Event) {
+func onConnect(event *CommandEvent) {
 	event.RespondLater()
 
 	player := music.GetGuildPlayer(event.Data.Interaction.GuildID)
@@ -130,15 +130,15 @@ func onConnect(event *Event) {
 		err := player.Connect(event.Session, channel.ID, event.Data.ChannelID)
 
 		if err != nil {
-			event.RespondUpdateMsg(err.Error())
+			event.RespondUpdateLaterMsg(err.Error())
 			return
 		}
 
-		event.RespondUpdateMsg(fmt.Sprintf("Connected to %s", channel.Mention()))
+		event.RespondUpdateLaterMsg(fmt.Sprintf("Connected to %s", channel.Mention()))
 	}()
 }
 
-func onDisconnect(event *Event) {
+func onDisconnect(event *CommandEvent) {
 	event.RespondLater()
 
 	player := music.GetGuildPlayer(event.Data.Interaction.GuildID)
@@ -147,15 +147,15 @@ func onDisconnect(event *Event) {
 		err := player.Disconnect()
 
 		if err != nil {
-			event.RespondUpdateMsg(err.Error())
+			event.RespondUpdateLaterMsg(err.Error())
 			return
 		}
 
-		event.RespondUpdateMsg("Disconnected the bot")
+		event.RespondUpdateLaterMsg("Disconnected the bot")
 	}()
 }
 
-func onPlay(event *Event) {
+func onPlay(event *CommandEvent) {
 	event.RespondLater()
 
 	guildID := event.Data.Interaction.GuildID
@@ -167,7 +167,7 @@ func onPlay(event *Event) {
 		vs, _ := event.Session.State.VoiceState(guildID, event.Data.Interaction.Member.User.ID)
 
 		if vs == nil {
-			event.RespondUpdateMsg("You must be connected to a voice channel or use the connect command to stream a video")
+			event.RespondUpdateLaterMsg("You must be connected to a voice channel or use the connect command to stream a video")
 			return
 		}
 
@@ -178,11 +178,11 @@ func onPlay(event *Event) {
 		videoInfo, err := player.AddToQueue(event.Data.Member, search)
 
 		if err != nil {
-			event.RespondUpdateMsg(err.Error())
+			event.RespondUpdateLaterMsg(err.Error())
 			return
 		}
 
-		event.RespondUpdate(&ResponseDataUpdate{
+		event.RespondUpdateLater(&ResponseDataUpdate{
 			Embeds: &[]*discordgo.MessageEmbed{
 				videoInfo.CreateEmbed("Added to Queue", true),
 			},
@@ -190,7 +190,7 @@ func onPlay(event *Event) {
 	}()
 }
 
-func onSkip(event *Event) {
+func onSkip(event *CommandEvent) {
 	event.RespondLater()
 
 	guildID := event.Data.Interaction.GuildID
@@ -206,15 +206,15 @@ func onSkip(event *Event) {
 		n, err := player.SkipQueue(numSkip)
 
 		if err != nil {
-			event.RespondUpdateMsg(err.Error())
+			event.RespondUpdateLaterMsg(err.Error())
 			return
 		}
 
-		event.RespondUpdateMsg(fmt.Sprintf("Skipped '%d' videos", n))
+		event.RespondUpdateLaterMsg(fmt.Sprintf("Skipped '%d' videos", n))
 	}()
 }
 
-func onQueue(event *Event) {
+func onQueue(event *CommandEvent) {
 	event.RespondLater()
 
 	guildID := event.Data.Interaction.GuildID
@@ -224,15 +224,15 @@ func onQueue(event *Event) {
 		queue, err := player.GetQueue()
 
 		if err != nil {
-			event.RespondUpdateMsg(err.Error())
+			event.RespondUpdateLaterMsg(err.Error())
 			return
 		}
 		if len(queue) == 0 {
-			event.RespondUpdateMsg("The queue is empty")
+			event.RespondUpdateLaterMsg("The queue is empty")
 			return
 		}
 
-		event.RespondUpdate(&ResponseDataUpdate{
+		event.RespondUpdateLater(&ResponseDataUpdate{
 			Embeds: &[]*discordgo.MessageEmbed{
 				{
 					Title:       "Video Queue",
@@ -243,7 +243,7 @@ func onQueue(event *Event) {
 	}()
 }
 
-func onReplay(event *Event) {
+func onReplay(event *CommandEvent) {
 	event.RespondLater()
 
 	guildID := event.Data.Interaction.GuildID
@@ -253,14 +253,14 @@ func onReplay(event *Event) {
 		active := player.ToggleReplayMode()
 
 		if active {
-			event.RespondUpdateMsg("Replay mode is now enabled. Rock'n'Roll baby!")
+			event.RespondUpdateLaterMsg("Replay mode is now enabled. Rock'n'Roll baby!")
 		} else {
-			event.RespondUpdateMsg("Replay mode is now disabled. At ease soldier!")
+			event.RespondUpdateLaterMsg("Replay mode is now disabled. At ease soldier!")
 		}
 	}
 }
 
-func onSetVolume(event *Event) {
+func onSetVolume(event *CommandEvent) {
 	event.RespondLater()
 
 	guildID := event.Data.Interaction.GuildID
@@ -270,6 +270,6 @@ func onSetVolume(event *Event) {
 		volume := uint32(event.Options[0].IntValue())
 		player.SetVolume(volume)
 
-		event.RespondUpdateMsg(fmt.Sprintf("Player volume set to '%d%%'", volume))
+		event.RespondUpdateLaterMsg(fmt.Sprintf("Player volume set to '%d%%'", volume))
 	}
 }

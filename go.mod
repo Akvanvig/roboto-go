@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/bwmarrin/discordgo v0.27.0
+	github.com/cnf/structhash v0.0.0-20201127153200-e1b16c1ebc08
 	github.com/gammazero/deque v0.2.1
 	github.com/google/uuid v1.3.0
 	github.com/rs/zerolog v1.29.0

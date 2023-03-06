@@ -9,7 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func convertCommandOptions(parentKey string, options []CommandOption, converters ...CommandConverter) []*discordgo.ApplicationCommandOption {
+func convertCommandOptions(parentKey string, options []CommandOption, converters ...func(cmd *CommandOption)) []*discordgo.ApplicationCommandOption {
 	optionsLen := len(options)
 
 	if optionsLen == 0 {
@@ -44,7 +44,6 @@ func convertCommandOptions(parentKey string, options []CommandOption, converters
 
 			if cmd.Type == discordgo.ApplicationCommandOptionSubCommand {
 				key = fmt.Sprintf("%s_%s", parentKey, cmd.Name)
-				cmd.key = key
 
 				for j := 0; j < len(converters); j++ {
 					converters[j](cmd)
@@ -75,7 +74,7 @@ func convertCommandOptions(parentKey string, options []CommandOption, converters
 	return optionsConverted[:validNum]
 }
 
-func initContextCommands(settings *CommandGroupSettings, commands []Command, callerName string, contextType discordgo.ApplicationCommandType, converters ...CommandConverter) {
+func initContextCommands(settings *CommandGroupSettings, commands []CommandOption, callerName string, contextType discordgo.ApplicationCommandType, converters ...func(cmd *CommandOption)) {
 	for i := 0; i < len(commands); i++ {
 		cmd := &commands[i]
 
@@ -109,7 +108,6 @@ func initContextCommands(settings *CommandGroupSettings, commands []Command, cal
 		}
 
 		key := fmt.Sprintf("clickcontext_%s", cmd.Name)
-		cmd.key = key
 
 		for j := 0; j < len(converters); j++ {
 			converters[j](cmd)
@@ -132,17 +130,17 @@ func initContextCommands(settings *CommandGroupSettings, commands []Command, cal
 	}
 }
 
-func InitUserCommands(settings *CommandGroupSettings, commands []Command, converters ...CommandConverter) {
+func InitUserCommands(settings *CommandGroupSettings, commands []CommandOption, converters ...func(cmd *CommandOption)) {
 	callerName := util.GetCallingFuncFileName()
 	initContextCommands(settings, commands, callerName, discordgo.UserApplicationCommand, converters...)
 }
 
-func InitMessageCommands(settings *CommandGroupSettings, commands []Command, converters ...CommandConverter) {
+func InitMessageCommands(settings *CommandGroupSettings, commands []CommandOption, converters ...func(cmd *CommandOption)) {
 	callerName := util.GetCallingFuncFileName()
 	initContextCommands(settings, commands, callerName, discordgo.MessageApplicationCommand, converters...)
 }
 
-func InitChatCommands(settings *CommandGroupSettings, commands []Command, converters ...CommandConverter) {
+func InitChatCommands(settings *CommandGroupSettings, commands []CommandOption, converters ...func(cmd *CommandOption)) {
 	callerName := util.GetCallingFuncFileName()
 
 	// Correction invalid top types

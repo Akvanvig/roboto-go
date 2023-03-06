@@ -1,5 +1,7 @@
 github.com/bwmarrin/discordgo v0.27.0 h1:4ZK9KN+rGIxZ0fdGTmgdCcliQeW8Zhu6MnlFI92nf0Q=
 github.com/bwmarrin/discordgo v0.27.0/go.mod h1:NJZpH+1AfhIcyQsPeuBKsUtYrRnjkyu0kIVMCHkZtRY=
+github.com/cnf/structhash v0.0.0-20201127153200-e1b16c1ebc08 h1:ox2F0PSMlrAAiAdknSRMDrAr8mfxPCfSZolH+/qQnyQ=
+github.com/cnf/structhash v0.0.0-20201127153200-e1b16c1ebc08/go.mod h1:pCxVEbcm3AMg7ejXyorUXi6HQCzOIBf7zEDVPtw0/U4=
 github.com/coreos/go-systemd/v22 v22.3.3-0.20220203105225-a9a7ef127534/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
 github.com/gammazero/deque v0.2.1 h1:qSdsbG6pgp6nL7A0+K/B7s12mcCY/5l5SIUpMOl+dC0=
 github.com/gammazero/deque v0.2.1/go.mod h1:LFroj8x4cMYCukHJDbxFCkT+r9AndaJnFMuZDV34tuU=
