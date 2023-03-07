@@ -3,7 +3,7 @@ package bot
 import (
 	"fmt"
 
-	"github.com/Akvanvig/roboto-go/internal/bot/lib/commands"
+	"github.com/Akvanvig/roboto-go/internal/bot/api"
 	_ "github.com/Akvanvig/roboto-go/internal/bot/modules"
 	"github.com/bwmarrin/discordgo"
 	"github.com/rs/zerolog/log"
@@ -59,7 +59,7 @@ func Start(token *string) {
 
 	session.AddHandler(onReady)
 	session.AddHandler(onMsg)
-	session.AddHandler(commands.Process)
+	session.AddHandler(api.ProcessCommands)
 	//session.AddHandler(onAuditlog)
 
 	err = session.Open()
@@ -67,7 +67,7 @@ func Start(token *string) {
 		log.Fatal().Err(err).Msg("Unable to open a session")
 	}
 
-	err = commands.Sync(session)
+	err = api.SyncCommands(session)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed synchronization step")
 	}

@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	. "github.com/Akvanvig/roboto-go/internal/bot/lib/commands"
+	. "github.com/Akvanvig/roboto-go/internal/bot/api"
 	"github.com/Akvanvig/roboto-go/internal/util"
 	"github.com/rs/zerolog/log"
 )
@@ -112,7 +112,6 @@ func onCatBonk(event *ComponentEvent) {
 // TODO(Fredrico):
 // This is unfinished
 func onGameWithMe(event *CommandEvent) {
-	log.Info().Msg("We got here")
 	event.RespondModal(&ResponseData{
 		Title: "A Game",
 		Actions: []ActionsRow{

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	. "github.com/Akvanvig/roboto-go/internal/bot/lib/commands"
+	. "github.com/Akvanvig/roboto-go/internal/bot/api"
 	"github.com/Akvanvig/roboto-go/internal/util"
 	"github.com/bwmarrin/discordgo"
 )
@@ -34,7 +34,7 @@ func init() {
 			Description: "?",
 			Options: []CommandOption{
 				{
-					Type:        discordgo.ApplicationCommandOptionString,
+					Type:        CommandOptionString,
 					Name:        "command",
 					Description: "?",
 					Required:    true,
@@ -76,7 +76,7 @@ func onOwnerRunCommand(event *CommandEvent) {
 					{
 						Title:       "Application Information",
 						Description: app.Description,
-						Fields: []*discordgo.MessageEmbedField{
+						Fields: []*MessageEmbedField{
 							{
 								Name:  "Team Members",
 								Value: strings.Join(members, "\n"),
@@ -84,12 +84,12 @@ func onOwnerRunCommand(event *CommandEvent) {
 						},
 					},
 				},
-				Flags: discordgo.MessageFlagsEphemeral,
+				Flags: MessageFlagsEphemeral,
 			},
 		})
 	case "announce":
 		if arg == "" {
-			event.RespondMsg("Can't send an empty announcement", discordgo.MessageFlagsEphemeral)
+			event.RespondMsg("Can't send an empty announcement", MessageFlagsEphemeral)
 			break
 		}
 
@@ -110,9 +110,9 @@ func onOwnerRunCommand(event *CommandEvent) {
 			}
 		}
 
-		event.RespondMsg("Announcement sent", discordgo.MessageFlagsEphemeral)
+		event.RespondMsg("Announcement sent", MessageFlagsEphemeral)
 	case "shutdown":
-		event.RespondMsg("Shutting down", discordgo.MessageFlagsEphemeral)
+		event.RespondMsg("Shutting down", MessageFlagsEphemeral)
 		util.SendOSInterruptSignal()
 	case "help":
 		fallthrough
@@ -127,13 +127,13 @@ func onOwnerRunCommand(event *CommandEvent) {
 		event.Respond(&Response{
 			Type: ResponseMsg,
 			Data: &ResponseData{
-				Embeds: []*discordgo.MessageEmbed{
+				Embeds: []*MessageEmbed{
 					{
 						Title:       "Valid Commands",
 						Description: builder.String(),
 					},
 				},
-				Flags: discordgo.MessageFlagsEphemeral,
+				Flags: MessageFlagsEphemeral,
 			},
 		})
 	}

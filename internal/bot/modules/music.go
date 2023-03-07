@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	. "github.com/Akvanvig/roboto-go/internal/bot/lib/commands"
+	. "github.com/Akvanvig/roboto-go/internal/bot/api"
 	"github.com/Akvanvig/roboto-go/internal/bot/lib/music"
-	"github.com/bwmarrin/discordgo"
 )
 
 func init() {
@@ -36,11 +35,11 @@ func init() {
 			Description: "Connect the bot to a voice channel",
 			Options: []CommandOption{
 				{
-					Type:        discordgo.ApplicationCommandOptionChannel,
+					Type:        CommandOptionChannel,
 					Name:        "channel",
 					Description: "The voice channel",
-					ChannelTypes: []discordgo.ChannelType{
-						discordgo.ChannelTypeGuildVoice,
+					ChannelTypes: []ChannelType{
+						ChannelTypeGuildVoice,
 					},
 					Required: true,
 				},
@@ -61,7 +60,7 @@ func init() {
 			Description: "Play a youtube video",
 			Options: []CommandOption{
 				{
-					Type:        discordgo.ApplicationCommandOptionString,
+					Type:        CommandOptionString,
 					Name:        "video",
 					Description: "The link of the video",
 					Required:    true,
@@ -83,7 +82,7 @@ func init() {
 			Description: "Skip one or more queued videos",
 			Options: []CommandOption{
 				{
-					Type:        discordgo.ApplicationCommandOptionInteger,
+					Type:        CommandOptionInteger,
 					Name:        "number",
 					Description: "The number of videos to skip",
 					Required:    false,
@@ -98,7 +97,7 @@ func init() {
 			Description: "Set the bot volume",
 			Options: []CommandOption{
 				{
-					Type:        discordgo.ApplicationCommandOptionInteger,
+					Type:        CommandOptionInteger,
 					Name:        "number",
 					Description: "The volume percentage as an integer",
 					Required:    true,
@@ -183,7 +182,7 @@ func onPlay(event *CommandEvent) {
 		}
 
 		event.RespondUpdateLater(&ResponseDataUpdate{
-			Embeds: &[]*discordgo.MessageEmbed{
+			Embeds: &[]*MessageEmbed{
 				videoInfo.CreateEmbed("Added to Queue", true),
 			},
 		})
@@ -233,7 +232,7 @@ func onQueue(event *CommandEvent) {
 		}
 
 		event.RespondUpdateLater(&ResponseDataUpdate{
-			Embeds: &[]*discordgo.MessageEmbed{
+			Embeds: &[]*MessageEmbed{
 				{
 					Title:       "Video Queue",
 					Description: strings.Join(queue, "\n"),

@@ -1,13 +1,20 @@
-package commands
+package api
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/Akvanvig/roboto-go/internal/util"
 	"github.com/bwmarrin/discordgo"
 	"github.com/rs/zerolog/log"
 )
+
+var allCommandsRaw = []*discordgo.ApplicationCommand{}
+var allCommands = map[string]CommandOption{}
+var allCachedResponseData = map[string]ResponseData{}
+var mutexCache = sync.RWMutex{}
 
 func convertCommandOptions(parentKey string, options []CommandOption, converters ...func(cmd *CommandOption)) []*discordgo.ApplicationCommandOption {
 	optionsLen := len(options)
@@ -175,4 +182,97 @@ func InitChatCommands(settings *CommandGroupSettings, commands []CommandOption, 
 	}
 
 	allCommandsRaw = append(allCommandsRaw, cmdRaw)
+}
+
+func SyncCommands(s *discordgo.Session) error {
+	log.Info().Msg("Synchronizing commands")
+
+	{
+		// Fetch existing commands
+		commandsExisting, err := s.ApplicationCommands(s.State.User.ID, "")
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to fetch existing commands")
+			return err
+		}
+
+		// Delete commands out of sync
+		for _, cmd := range commandsExisting {
+			deleteCommand := true
+			for _, cmdTmp := range allCommandsRaw {
+				if cmd.Name == cmdTmp.Name {
+					deleteCommand = false
+					break
+				}
+			}
+
+			if !deleteCommand {
+				continue
+			}
+
+			err = s.ApplicationCommandDelete(s.State.User.ID, "", cmd.ID)
+			if err != nil {
+				log.Error().Msg("Failed to delete an out of sync command")
+				return err
+			}
+		}
+	}
+
+	{
+		// Bulk creation of commands
+		_, err := s.ApplicationCommandBulkOverwrite(s.State.User.ID, "", allCommandsRaw)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to create commands")
+			return err
+		}
+
+		allCommandsRaw = nil
+	}
+
+	{
+		// Cleanup of init alloc data
+		var m runtime.MemStats
+		runtime.ReadMemStats(&m)
+		bytesBefore := m.Alloc
+
+		runtime.GC()
+
+		runtime.ReadMemStats(&m)
+		bytesAfter := m.Alloc
+
+		log.Info().Uint64("bytes", bytesBefore-bytesAfter).Msg("Cleaned up temporary init data")
+	}
+
+	log.Info().Msg("Finished synchronizing commands")
+
+	return nil
+}
+
+func ProcessCommands(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	eventCore := Event{
+		Session: s,
+		Data:    i,
+	}
+
+	switch i.Interaction.Type {
+	case discordgo.InteractionApplicationCommand:
+		handler, event := eventCore.ParseCommandData()
+		if handler != nil {
+			handler(event)
+			return
+		}
+	case discordgo.InteractionModalSubmit:
+		handler, event := eventCore.ParseModalData()
+		if handler != nil {
+			handler(event)
+			return
+		}
+	case discordgo.InteractionMessageComponent:
+		handler, event := eventCore.ParseComponentData()
+		if handler != nil {
+			handler(event)
+			return
+		}
+	}
+
+	eventCore.RespondMsg("An error occurred -> You probably tried to interact with an old event", discordgo.MessageFlagsEphemeral)
 }

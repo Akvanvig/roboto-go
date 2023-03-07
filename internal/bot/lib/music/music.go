@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Akvanvig/roboto-go/internal/bot/api"
 	"github.com/Akvanvig/roboto-go/internal/bot/lib/music/audioop"
 	"github.com/Akvanvig/roboto-go/internal/bot/lib/music/ffmpeg"
 	"github.com/Akvanvig/roboto-go/internal/bot/lib/music/youtubedl"
@@ -131,11 +132,11 @@ func (player *GuildPlayer) play(videoInfo *BasicVideoInfo) {
 		return
 	}
 
-	msg, err := player.session.ChannelMessageSendEmbed(player.channelID, videoInfo.CreateEmbed("Now Playing", false))
-
 	if err != nil {
 		return
 	}
+
+	msg, err := player.sendNowPlaying(videoInfo)
 
 	// Play the stream
 	{
@@ -185,6 +186,59 @@ func (player *GuildPlayer) play(videoInfo *BasicVideoInfo) {
 	}
 
 	player.session.ChannelMessageDelete(player.channelID, msg.ID)
+}
+
+func (player *GuildPlayer) sendNowPlaying(videoInfo *BasicVideoInfo) (*discordgo.Message, error) {
+	onButtonClick := func(event *api.ComponentEvent) {
+		button := (*event.Component).(api.Button)
+		if button.Label == "Show Current Queue" {
+			event.RespondLater(discordgo.MessageFlagsEphemeral)
+			queue, err := player.GetQueue()
+
+			if err != nil {
+				event.RespondUpdateLaterMsg("Failed to retrieve queue")
+			} else {
+				event.RespondUpdateLater(&api.ResponseDataUpdate{
+					Embeds: &[]*api.MessageEmbed{
+						{
+							Title:       "Video Queue",
+							Description: strings.Join(queue, "\n"),
+						},
+					},
+				})
+			}
+		} else {
+			event.RespondLater()
+			player.SkipQueue(1)
+			event.RespondUpdateLaterMsg("Skipped")
+		}
+	}
+
+	return player.session.ChannelMessageSendComplex(player.channelID, (&api.MessageSend{
+		Embeds: []*api.MessageEmbed{
+			videoInfo.CreateEmbed("Now Playing", false),
+		},
+		Actions: []api.ActionsRow{
+			{
+				Components: []api.MessageComponent{
+					api.Button{
+						Label: "Show Current Queue",
+						Style: api.SecondaryButton,
+					},
+					api.Button{
+						Emoji: api.ComponentEmoji{
+							Name: "⏩",
+						},
+						Label: "Skip Video/Song",
+						Style: api.SecondaryButton,
+					},
+				},
+			},
+		},
+		Handler: &api.MessageHandler{
+			OnComponentSubmit: onButtonClick,
+		},
+	}).ConvertToOriginal())
 }
 
 func (player *GuildPlayer) IsConnected() bool {
