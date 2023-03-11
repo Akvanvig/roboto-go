@@ -20,8 +20,9 @@ FROM alpine:3 AS roboto-downloader
 ARG TARGETPLATFORM
 # Download latest yt-dlp for target platform
 COPY ./tools/dockerplatform_to_yt-dlp_file.sh /tools/script.sh
-RUN apk add --no-cache curl
-RUN YT_DLP=$(/bin/sh /tools/script.sh ${TARGETPLATFORM}) && curl https://github.com/yt-dlp/yt-dlp/releases/latest/download/${YT_DLP} --create-dirs -o /out/yt-dlp
+RUN mkdir /out
+RUN apk add --no-cache wget
+RUN YT_DLP=$(/bin/sh /tools/script.sh ${TARGETPLATFORM}) && wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/${YT_DLP} -o /out/yt-dlp
 RUN chmod 755 /out/yt-dlp
 
 # copy files to final container
