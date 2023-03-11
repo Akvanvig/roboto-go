@@ -222,12 +222,15 @@ func (player *GuildPlayer) sendNowPlaying(videoInfo *BasicVideoInfo) (*discordgo
 			{
 				Components: []api.MessageComponent{
 					api.Button{
+						Emoji: api.ComponentEmoji{
+							Name: "🤙",
+						},
 						Label: "Show Current Queue",
 						Style: api.SecondaryButton,
 					},
 					api.Button{
 						Emoji: api.ComponentEmoji{
-							Name: "⏩",
+							Name: "👉",
 						},
 						Label: "Skip Video/Song",
 						Style: api.SecondaryButton,
@@ -444,7 +447,7 @@ func (videoInfo *BasicVideoInfo) CreateEmbed(title string, simple bool) *discord
 		Footer:    footer,
 		Timestamp: timestamp,
 		// WHITE WHITE WHITE
-		Color: 16777215,
+		Color: 43260,
 	}
 }
 

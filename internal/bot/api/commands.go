@@ -184,7 +184,7 @@ func InitChatCommands(settings *CommandGroupSettings, commands []CommandOption, 
 	allCommandsRaw = append(allCommandsRaw, cmdRaw)
 }
 
-func SyncCommands(s *discordgo.Session) error {
+func SetupCommands(s *discordgo.Session) error {
 	log.Info().Msg("Synchronizing commands")
 
 	{

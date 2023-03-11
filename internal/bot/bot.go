@@ -67,9 +67,9 @@ func Start(token *string) {
 		log.Fatal().Err(err).Msg("Unable to open a session")
 	}
 
-	err = api.SyncCommands(session)
+	err = api.SetupCommands(session)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed synchronization step")
+		log.Fatal().Err(err).Msg("Failed setup step")
 	}
 
 	log.Info().Msg("Bot is ready")
