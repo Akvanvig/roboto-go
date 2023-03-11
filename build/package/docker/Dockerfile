@@ -22,7 +22,7 @@ ARG TARGETPLATFORM
 COPY ./tools/dockerplatform_to_yt-dlp_file.sh /tools/script.sh
 RUN mkdir /out
 RUN apk add --no-cache wget
-RUN YT_DLP=$(/bin/sh /tools/script.sh $TARGETPLATFORM) && wget "https://github.com/yt-dlp/yt-dlp/releases/latest/download/${YT_DLP}" -o /out/yt-dlp
+RUN YT_DLP=$(/bin/sh /tools/script.sh $TARGETPLATFORM) && wget -O /out/yt-dlp https://github.com/yt-dlp/yt-dlp/releases/latest/download/${YT_DLP}
 RUN chmod 755 /out/yt-dlp
 
 # copy files to final container
