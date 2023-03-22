@@ -159,7 +159,7 @@ func (player *GuildPlayer) play(videoInfo *BasicVideoInfo) {
 				n, err := io.ReadFull(readerBuffered, buffer[:])
 
 				// Finished playing
-				if err != nil && n != 0 {
+				if err != nil || n == 0 {
 					break stream
 				}
 
