@@ -1,0 +1,6 @@
+lavalink:
+  nodes:
+  - name: Lol
+    address: lavalink:2333
+    password: supersecret
+    secure: false

@@ -1,34 +1,52 @@
 package main
 
 import (
-	"flag"
 	"os"
 	"os/signal"
 
-	// This import has to be top for init to setup logger state properly
-	_ "github.com/Akvanvig/roboto-go/internal/_setup"
-	// Rest of the imports
-	"github.com/Akvanvig/roboto-go/internal/bot"
+	"github.com/mroctopus/bottie-bot/internal/bot"
+	"github.com/mroctopus/bottie-bot/internal/command"
+	"github.com/mroctopus/bottie-bot/internal/config"
+	"github.com/mroctopus/bottie-bot/internal/util"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
 func main() {
-	// Arguments
-	var token = flag.String("token", "", "Bot access token")
-	flag.Parse()
-
-	if *token == "" {
-		log.Fatal().Msg("Token argument can not be empty")
+	if util.IsDev() {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	}
 
-	// Run
+	log.Info().Msg("Reading config...")
+
+	cfg, err := config.Load()
+	if err != nil {
+		log.Panic().Err(err).Msg("Failed to read config")
+	}
+
+	log.Info().Msg("Initializing bot...")
+
+	bot, err := bot.New(cfg)
+	if err != nil {
+		log.Panic().Err(err).Msg("Failed to initialize bot")
+	}
+
+	cmds, r := command.New(bot)
+
+	log.Info().Msg("Starting bot...")
+
 	channel := make(chan os.Signal, 1)
 	signal.Notify(channel, os.Interrupt)
 
-	go bot.Start(token)
+	err = bot.Start(cmds, r)
+	if err != nil {
+		log.Panic().Err(err).Msg("Failed to start bot")
+	}
 
-	log.Info().Msg("Running the bot, press Ctrl+C to exit")
+	log.Info().Msg("Bot started, press Ctrl+C to exit")
 	<-channel
 
 	bot.Stop()
+
+	log.Info().Msg("Shutdown bot...")
 }
