@@ -6,7 +6,6 @@ import (
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/disgo/handler/middleware"
-	"github.com/disgoorg/json"
 	"github.com/mroctopus/bottie-bot/internal/bot"
 )
 
@@ -36,54 +35,46 @@ func New(bot *bot.RobotoBot) ([]discord.ApplicationCommandCreate, *handler.Mux) 
 
 // -- COMMON --
 
-/*
+type MessageType int
+
 const (
-	MessageColorPrimary =
+	MessageTypeDefault MessageType = iota
+	MessageTypeError
 )
-*/
 
-func message(txt string) discord.MessageCreate {
-	return discord.MessageCreate{
-		Embeds: []discord.Embed{
-			{
-				Description: txt,
-				Color:       0,
-			},
+func message[T *discord.MessageCreate | *discord.MessageUpdate](dst T, txt string, t MessageType, flags discord.MessageFlags) T {
+	var color int
+	switch t {
+	case MessageTypeError:
+		color = 0
+		txt = fmt.Sprintf("Error: %s", txt)
+	case MessageTypeDefault:
+		fallthrough
+	default:
+		color = 0
+	}
+
+	embeds := []discord.Embed{
+		{
+			Description: txt,
+			Color:       color,
 		},
 	}
-}
 
-func messageUpdate(txt string) discord.MessageUpdate {
-	return discord.MessageUpdate{
-		Embeds: &[]discord.Embed{
-			{
-				Description: txt,
-				Color:       0,
-			},
-		},
+	// NOTE:
+	// For the love of god, please let this proposal go through:
+	// https://github.com/golang/go/issues/45380
+	switch v := any(dst).(type) {
+	case *discord.MessageCreate:
+		v.Embeds = embeds
+		v.Flags = flags
+	case *discord.MessageUpdate:
+		v.Embeds = &embeds
+		if flags > 0 {
+			v.Flags = &flags
+		}
+		v.Components = nil
 	}
-}
 
-func errorMessage(err error) discord.MessageCreate {
-	return discord.MessageCreate{
-		Embeds: []discord.Embed{
-			{
-				Description: fmt.Sprintf("Error: %s", err.Error()),
-				Color:       0,
-			},
-		},
-		Flags: discord.MessageFlagEphemeral,
-	}
-}
-
-func errorMessageUpdate(err error) discord.MessageUpdate {
-	return discord.MessageUpdate{
-		Embeds: &[]discord.Embed{
-			{
-				Description: fmt.Sprintf("Error: %s", err.Error()),
-				Color:       0,
-			},
-		},
-		Flags: json.Ptr(discord.MessageFlagEphemeral),
-	}
+	return dst
 }

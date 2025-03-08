@@ -1,8 +1,8 @@
 FROM golang:1.23 AS builder
 
+COPY ./go.mod ./go.sum /build/
 COPY ./cmd /build/cmd/
 COPY ./internal /build/internal/
-COPY ./go.mod ./go.sum /build/
 WORKDIR /build
 
 RUN go mod download
