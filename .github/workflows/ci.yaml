@@ -11,6 +11,7 @@ on:
 
 permissions:
   packages: write
+  contents: read
 
 jobs:
   audit-project:
