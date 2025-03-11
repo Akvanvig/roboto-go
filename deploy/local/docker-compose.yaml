@@ -21,6 +21,7 @@ services:
       - LAVALINK_SERVER_PASSWORD=supersecret
     volumes:
       - ./lavalink/application.yml:/opt/Lavalink/application.yml
+      - ./plugins/:/opt/Lavalink/plugins/
     networks:
       - streaming
     expose:

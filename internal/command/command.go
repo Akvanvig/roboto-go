@@ -15,7 +15,7 @@ type CommandBootstrapper func(*bot.RobotoBot, *handler.Mux) discord.ApplicationC
 
 // Add more bootstappers here
 var bootstrappers = [...]CommandBootstrapper{
-	music,
+	musicCommands,
 }
 
 func New(bot *bot.RobotoBot) ([]discord.ApplicationCommandCreate, *handler.Mux) {

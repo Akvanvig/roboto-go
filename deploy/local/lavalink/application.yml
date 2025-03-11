@@ -10,14 +10,18 @@ plugins:
     allowDirectPlaylistIds: true
     clients:
       - MUSIC
+      #- TV
+      #- TVHTML5EMBEDDED
       - WEB
-      - WEBEMBEDDED
+      - WEBEMBEDDED 
+      - MWEB
+      - ANDROID_VR
 
 lavalink:
   plugins:
   - dependency: "dev.lavalink.youtube:youtube-plugin:1.11.5"
     snapshot: false
-  - dependency: "com.github.topi314.lavaqueue:lavaqueue-plugin:98c97f9"
+  - dependency: "com.github.topi314.lavaqueue:lavaqueue-plugin:d10820e"
     repository: "https://maven.topi.wtf/snapshots"
     snapshot: false
   server:

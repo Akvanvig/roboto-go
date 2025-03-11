@@ -12,7 +12,10 @@ import (
 	"github.com/disgoorg/disgo/gateway"
 	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/disgolink/v3/disgolink"
+	"github.com/disgoorg/lavaqueue-plugin"
+	"github.com/disgoorg/snowflake/v2"
 	"github.com/mroctopus/bottie-bot/internal/config"
+	"github.com/mroctopus/bottie-bot/internal/player"
 )
 
 type RobotoBot struct {
@@ -20,7 +23,9 @@ type RobotoBot struct {
 	Config *config.RobotoConfig
 	// Clients
 	Discord  bot.Client
-	Lavalink disgolink.Client
+	Lavalink disgolink.Client // TODO: Add message cache mapping here for lavalink handler to use
+	// More
+	LavalinkTrackMessages map[snowflake.ID]player.TrackMessageData
 }
 
 func (b *RobotoBot) Start(cmds []discord.ApplicationCommandCreate, r *handler.Mux) error {
@@ -108,8 +113,12 @@ func New(cfg *config.RobotoConfig) (*RobotoBot, error) {
 	}
 
 	if cfg.Lavalink != nil {
-		lavalink := disgolink.New(discord.ApplicationID(), disgolink.WithListenerFunc(roboto.OnLavalinkEvent))
+		lavalink := disgolink.New(discord.ApplicationID(),
+			disgolink.WithListenerFunc(roboto.OnLavalinkEvent),
+			disgolink.WithPlugins(lavaqueue.New()),
+		)
 		roboto.Lavalink = lavalink
+		roboto.LavalinkTrackMessages = make(map[snowflake.ID]player.TrackMessageData)
 	}
 	roboto.Discord = discord
 
