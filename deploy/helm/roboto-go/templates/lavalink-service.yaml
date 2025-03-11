@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "roboto-go.name" . }}-lavalink
+  labels:
+    {{- include "roboto-go.labelsLavalink" . | nindent 4 }}
+spec:
+  type: {{ .Values.lavalink.service.type }}
+  clusterIP: None
+  ports:
+    - port: {{ .Values.lavalink.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  # selector:
+  #   - include "roboto-go.selectorLabelsLavalink" . | nindent 4 
