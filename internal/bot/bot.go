@@ -26,49 +26,31 @@ type RobotoBot struct {
 }
 
 func (b *RobotoBot) Start(cmds []discord.ApplicationCommandCreate, r *handler.Mux) error {
-	var wgBot sync.WaitGroup
+	var wg sync.WaitGroup
 
 	if b.Player != nil {
-		wgBot.Add(1)
+		wg.Add(1)
 		go func() {
-			defer wgBot.Done()
-			var wgLavalink sync.WaitGroup
+			defer wg.Done()
 
-			nodes := b.Config.Lavalink.Nodes
-			for i := range nodes {
-				wgLavalink.Add(1)
-				node := nodes[i]
-				go func() {
-					defer wgLavalink.Done()
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
 
-					ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-					defer cancel()
-
-					_, err := b.Player.Lavalink.AddNode(ctx, disgolink.NodeConfig{
-						Name:     node.Name,
-						Address:  node.Address,
-						Password: node.Password,
-						Secure:   node.Secure,
-					})
-					if err != nil {
-						// TODO
-					}
-
-				}()
-			}
-
-			wgLavalink.Wait()
+			b.Player.AddNodes(ctx, b.Config.Lavalink.Nodes...)
 		}()
 	}
 
-	wgBot.Add(1)
+	wg.Add(1)
 	go func() {
-		defer wgBot.Done()
+		defer wg.Done()
 		b.Discord.AddEventListeners(r)
 		handler.SyncCommands(b.Discord, cmds, nil)
 	}()
 
-	wgBot.Wait()
+	// TODO:
+	// Proper error handling for sync commands
+	// and adding nodes
+	wg.Wait()
 
 	err := b.Discord.OpenGateway(context.Background())
 	if err != nil {
@@ -81,7 +63,7 @@ func (b *RobotoBot) Start(cmds []discord.ApplicationCommandCreate, r *handler.Mu
 func (b *RobotoBot) Stop() {
 	b.Discord.Close(context.Background())
 	if b.Player != nil {
-		b.Player.Lavalink.Close()
+		b.Player.Close()
 	}
 }
 

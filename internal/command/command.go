@@ -1,8 +1,6 @@
 package command
 
 import (
-	"fmt"
-
 	"github.com/Akvanvig/roboto-go/internal/bot"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
@@ -47,8 +45,7 @@ func message[T *discord.MessageCreate | *discord.MessageUpdate](dst T, txt strin
 	var color int
 	switch t {
 	case MessageTypeError:
-		color = 0
-		txt = fmt.Sprintf("Error: %s", txt)
+		color = 0xd43535
 	case MessageTypeDefault:
 		fallthrough
 	default:

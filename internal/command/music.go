@@ -9,6 +9,7 @@ import (
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/disgolink/v3/lavalink"
+	"github.com/disgoorg/json"
 )
 
 // -- BOOTSTRAP --
@@ -55,6 +56,19 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 					},
 				},
 			},
+			discord.ApplicationCommandOptionSubCommand{
+				Name:        "volume",
+				Description: "Adjust the music volume",
+				Options: []discord.ApplicationCommandOption{
+					discord.ApplicationCommandOptionInt{
+						Name:        "number",
+						Description: "The volume percentage",
+						Required:    true,
+						MinValue:    json.Ptr(0),
+						MaxValue:    json.Ptr(100),
+					},
+				},
+			},
 		},
 	}
 
@@ -67,9 +81,15 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 			// Middleware to check for existence of player
 			r.Use(func(next handler.Handler) handler.Handler {
 				return func(e *handler.InteractionEvent) error {
-					if h.Player.ChannelID(*e.GuildID()) != nil {
-						return e.Respond(discord.InteractionResponseTypeCreateMessage, *message(&discord.MessageUpdate{}, "No music is currently playing", MessageTypeDefault, discord.MessageFlagEphemeral))
+					channelID := h.Player.ChannelID(*e.GuildID())
+					if channelID == nil {
+						return e.Respond(discord.InteractionResponseTypeCreateMessage, *message(&discord.MessageUpdate{}, "No music is currently playing", MessageTypeError, discord.MessageFlagEphemeral))
 					}
+					if *channelID != e.Channel().ID() {
+						channel, _ := e.Client().Caches().Channel(*channelID)
+						return e.Respond(discord.InteractionResponseTypeCreateMessage, *message(&discord.MessageUpdate{}, fmt.Sprintf("The bot is expecting music interactions in the %s channel", channel.Mention()), MessageTypeError, discord.MessageFlagEphemeral))
+					}
+
 					return next(e)
 				}
 			})
@@ -86,7 +106,8 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 				r.Component("/previous", h.OnPlayerPreviousButton)
 				r.Component("/pause_play", h.OnPlayerPlayPauseButton)
 			*/
-
+			r.SlashCommand("/queue", h.onQueue)
+			r.SlashCommand("/volume", h.onVolume)
 			r.Component("/skip", h.onSkipButton)
 			r.Component("/stop", h.onStopButton)
 		})
@@ -129,7 +150,7 @@ func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handl
 		return err
 	}
 
-	h.Player.Search(e.Ctx, *e.GuildID(), q,
+	err = h.Player.Search(e.Ctx, *e.GuildID(), q,
 		func(tracks ...lavalink.Track) {
 			if len(tracks) == 0 {
 				e.UpdateInteractionResponse(*message(&discord.MessageUpdate{}, fmt.Sprintf("No results found for %s", q), MessageTypeDefault, 0))
@@ -157,8 +178,27 @@ func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handl
 			e.UpdateInteractionResponse(*message(&discord.MessageUpdate{}, err.Error(), MessageTypeError, 0))
 		},
 	)
+	if err != nil {
+		_, err = e.UpdateInteractionResponse(*message(&discord.MessageUpdate{}, "Failed to search for song", MessageTypeError, 0))
+		return err
+	}
 
 	return nil
+}
+
+func (h *MusicHandler) onQueue(data discord.SlashCommandInteractionData, e *handler.CommandEvent) error {
+	// TODO
+	return nil
+}
+
+func (h *MusicHandler) onVolume(data discord.SlashCommandInteractionData, e *handler.CommandEvent) error {
+	volume := data.Int("volume")
+	err := h.Player.Volume(e.Ctx, *e.GuildID(), volume)
+	if err != nil {
+		return e.CreateMessage(*message(&discord.MessageCreate{}, "Failed to adjust the volume", MessageTypeError, 0))
+	}
+
+	return e.CreateMessage(*message(&discord.MessageCreate{}, fmt.Sprintf("Set the volume to %d%%.", volume), MessageTypeDefault, 0))
 }
 
 func (h *MusicHandler) onSkipButton(e *handler.ComponentEvent) error {
@@ -188,5 +228,5 @@ func (h *MusicHandler) onStopButton(e *handler.ComponentEvent) error {
 
 	// TODO:
 	// Look into this
-	return e.UpdateMessage(*message(&discord.MessageUpdate{}, "Stopped playing music", MessageTypeDefault, 0))
+	return e.CreateMessage(*message(&discord.MessageCreate{}, "Stopped playing music", MessageTypeDefault, 0))
 }

@@ -3,6 +3,7 @@ package player
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -113,10 +114,10 @@ func Message[T *discord.MessageCreate | *discord.MessageUpdate](dst T, txt strin
 }
 
 type Player struct {
-	Discord         bot.Client
-	Lavalink        disgolink.Client
-	PlayingChannels map[snowflake.ID]snowflake.ID
-	PlayingMessages map[string]snowflake.ID
+	discord         bot.Client
+	lavalink        disgolink.Client
+	playingChannels map[snowflake.ID]snowflake.ID
+	playingMessages map[string]snowflake.ID
 	// NOTE:
 	// This mutex is currently global, but it should be per guild
 	m sync.Mutex
@@ -126,11 +127,20 @@ func (p *Player) ChannelID(guildID snowflake.ID) *snowflake.ID {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	channelID, ok := p.PlayingChannels[guildID]
+	channelID, ok := p.playingChannels[guildID]
 	if !ok {
 		return nil
 	}
 	return &channelID
+}
+
+func (p *Player) Volume(ctx context.Context, guildID snowflake.ID, volume int) error {
+	lp := p.lavalink.Player(guildID)
+	if lp == nil {
+		return fmt.Errorf("no active nodes")
+	}
+
+	return lp.Update(ctx, lavalink.WithVolume(volume))
 }
 
 // TODO:
@@ -138,8 +148,12 @@ func (p *Player) ChannelID(guildID snowflake.ID) *snowflake.ID {
 type SearchResultHandler func(tracks ...lavalink.Track)
 type SearchResultErrorHandler func(err error)
 
-func (p *Player) Search(ctx context.Context, guildID snowflake.ID, query string, onResult SearchResultHandler, onError SearchResultErrorHandler) {
-	lp := p.Lavalink.Player(guildID)
+func (p *Player) Search(ctx context.Context, guildID snowflake.ID, query string, onResult SearchResultHandler, onError SearchResultErrorHandler) error {
+	lp := p.lavalink.Player(guildID)
+	if lp == nil {
+		return fmt.Errorf("no active nodes")
+	}
+
 	lp.Node().LoadTracksHandler(ctx, query, disgolink.NewResultHandler(
 		func(track lavalink.Track) {
 			onResult(track)
@@ -157,10 +171,15 @@ func (p *Player) Search(ctx context.Context, guildID snowflake.ID, query string,
 			onError(err)
 		},
 	))
+
+	return nil
 }
 
 func (p *Player) Add(ctx context.Context, guildID snowflake.ID, channelID snowflake.ID, user discord.User, tracks ...lavalink.Track) error {
-	lp := p.Lavalink.Player(guildID)
+	lp := p.lavalink.Player(guildID)
+	if lp == nil {
+		return fmt.Errorf("no active nodes")
+	}
 
 	data, err := json.Marshal(TrackUserData{
 		User:        user.Username,
@@ -189,14 +208,17 @@ func (p *Player) Add(ctx context.Context, guildID snowflake.ID, channelID snowfl
 	}
 
 	if track != nil {
-		p.PlayingChannels[guildID] = channelID
+		p.playingChannels[guildID] = channelID
 	}
 
 	return nil
 }
 
 func (p *Player) Next(ctx context.Context, guildID snowflake.ID) (*lavalink.Track, error) {
-	lp := p.Lavalink.Player(guildID)
+	lp := p.lavalink.Player(guildID)
+	if lp == nil {
+		return nil, fmt.Errorf("no active nodes")
+	}
 
 	track, err := lavaqueue.QueueNextTrack(ctx, lp.Node(), guildID)
 	if err != nil {
@@ -214,17 +236,66 @@ func (p *Player) Next(ctx context.Context, guildID snowflake.ID) (*lavalink.Trac
 	return track, nil
 }
 
+// TODO:
+// Check how to handle the channel player here
 func (p *Player) Stop(ctx context.Context, guildID snowflake.ID) error {
-	lp := p.Lavalink.Player(guildID)
+	lp := p.lavalink.Player(guildID)
+	if lp == nil {
+		return fmt.Errorf("no active nodes")
+	}
+
 	return lp.Destroy(ctx)
+}
+
+func (p *Player) AddNodes(ctx context.Context, configs ...disgolink.NodeConfig) ([]disgolink.Node, error) {
+	var (
+		errs  error
+		nodes []disgolink.Node
+		wg    sync.WaitGroup
+		m     sync.Mutex
+	)
+
+	for i := range configs {
+		cfg := configs[i]
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			node, err := p.lavalink.AddNode(ctx, disgolink.NodeConfig{
+				Name:     cfg.Name,
+				Address:  cfg.Address,
+				Password: cfg.Password,
+				Secure:   cfg.Secure,
+			})
+
+			m.Lock()
+			if node != nil {
+				nodes = append(nodes, node)
+			}
+			errs = errors.Join(errs, err)
+			m.Unlock()
+		}()
+	}
+
+	wg.Wait()
+	return nodes, errs
+}
+
+func (p *Player) Close() {
+	//p.m.Lock()
+	//defer p.m.Unlock()
+
+	// TODO:
+	// Investigate if this causes our handlers to be fucked?
+	p.lavalink.Close()
 }
 
 func New(discord bot.Client, lavalink disgolink.Client) *Player {
 	player := &Player{
-		Discord:         discord,
-		Lavalink:        lavalink,
-		PlayingChannels: make(map[snowflake.ID]snowflake.ID),
-		PlayingMessages: make(map[string]snowflake.ID),
+		discord:         discord,
+		lavalink:        lavalink,
+		playingChannels: make(map[snowflake.ID]snowflake.ID),
+		playingMessages: make(map[string]snowflake.ID),
 	}
 
 	discord.AddEventListeners(bot.NewListenerFunc(player.OnDiscordEvent))

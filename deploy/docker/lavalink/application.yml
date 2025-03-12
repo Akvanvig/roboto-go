@@ -10,7 +10,7 @@ plugins:
     allowDirectPlaylistIds: true
     #oauth:
     #  enabled: true
-    #  refreshToken: **
+    #  refreshToken: 
     clients:
       - MUSIC
       #- TV

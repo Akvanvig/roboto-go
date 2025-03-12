@@ -8,6 +8,7 @@ import (
 	"runtime"
 
 	"github.com/Akvanvig/roboto-go/internal/util"
+	"github.com/disgoorg/disgolink/v3/disgolink"
 	"gopkg.in/yaml.v3"
 )
 
@@ -15,15 +16,8 @@ type DiscordConfig struct {
 	Token string `yaml:"token"`
 }
 
-type NodeConfig struct {
-	Name     string `yaml:"name"`
-	Address  string `yaml:"address"`
-	Password string `yaml:"password"`
-	Secure   bool   `yaml:"secure"`
-}
-
 type LavalinkConfig struct {
-	Nodes []NodeConfig `yaml:"nodes"`
+	Nodes []disgolink.NodeConfig `yaml:"nodes"`
 }
 
 type RobotoConfig struct {
