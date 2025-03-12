@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/mroctopus/bottie-bot/internal/util"
+	"github.com/Akvanvig/roboto-go/internal/util"
 	"gopkg.in/yaml.v3"
 )
 

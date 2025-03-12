@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Akvanvig/roboto-go/internal/config"
+	"github.com/Akvanvig/roboto-go/internal/player"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/cache"
@@ -13,8 +15,6 @@ import (
 	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/disgolink/v3/disgolink"
 	"github.com/disgoorg/lavaqueue-plugin"
-	"github.com/mroctopus/bottie-bot/internal/config"
-	"github.com/mroctopus/bottie-bot/internal/player"
 )
 
 type RobotoBot struct {

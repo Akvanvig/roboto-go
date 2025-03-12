@@ -25,7 +25,7 @@ go.work.sum
 .env
 
 # Cache
-deploy/local/plugins/*
+deploy/docker/plugins/*
 
 # config files
 config_secrets.yaml

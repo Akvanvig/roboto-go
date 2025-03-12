@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Akvanvig/roboto-go/internal/bot"
+	"github.com/Akvanvig/roboto-go/internal/player"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/disgolink/v3/lavalink"
-	"github.com/mroctopus/bottie-bot/internal/bot"
-	"github.com/mroctopus/bottie-bot/internal/player"
 )
 
 // -- BOOTSTRAP --
@@ -108,7 +108,7 @@ func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handl
 
 	vs, ok := client.Caches().VoiceState(*e.GuildID(), e.User().ID)
 	if !ok {
-		return e.CreateMessage(*message(&discord.MessageCreate{}, "You must be in a voice channel to queue music", MessageTypeDefault, discord.MessageFlagEphemeral))
+		return e.CreateMessage(*message(&discord.MessageCreate{}, "You must be in a voice channel to queue music", MessageTypeError, discord.MessageFlagEphemeral))
 	}
 
 	src, _ := data.OptString("src")

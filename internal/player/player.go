@@ -112,10 +112,6 @@ func Message[T *discord.MessageCreate | *discord.MessageUpdate](dst T, txt strin
 	return dst
 }
 
-func AddedToQueue() {
-
-}
-
 type Player struct {
 	Discord         bot.Client
 	Lavalink        disgolink.Client

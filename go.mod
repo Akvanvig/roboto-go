@@ -1,4 +1,4 @@
-module github.com/mroctopus/bottie-bot
+module github.com/Akvanvig/roboto-go
 
 go 1.23.6
 

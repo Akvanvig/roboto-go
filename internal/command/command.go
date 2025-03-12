@@ -3,10 +3,10 @@ package command
 import (
 	"fmt"
 
+	"github.com/Akvanvig/roboto-go/internal/bot"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/disgo/handler/middleware"
-	"github.com/mroctopus/bottie-bot/internal/bot"
 )
 
 // -- COMMANDS --

@@ -1,9 +1,9 @@
 package command
 
 import (
+	"github.com/Akvanvig/roboto-go/internal/bot"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
-	"github.com/mroctopus/bottie-bot/internal/bot"
 )
 
 // -- BOOTSTRAP --

@@ -5,10 +5,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/mroctopus/bottie-bot/internal/bot"
-	"github.com/mroctopus/bottie-bot/internal/command"
-	"github.com/mroctopus/bottie-bot/internal/config"
-	"github.com/mroctopus/bottie-bot/internal/util"
+	"github.com/Akvanvig/roboto-go/internal/bot"
+	"github.com/Akvanvig/roboto-go/internal/command"
+	"github.com/Akvanvig/roboto-go/internal/config"
+	"github.com/Akvanvig/roboto-go/internal/util"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
