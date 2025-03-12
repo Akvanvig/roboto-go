@@ -6,14 +6,12 @@ import (
 
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
-	"github.com/disgoorg/disgolink/v3/disgolink"
 	"github.com/disgoorg/disgolink/v3/lavalink"
-	"github.com/disgoorg/snowflake/v2"
 	"github.com/mroctopus/bottie-bot/internal/bot"
 	"github.com/mroctopus/bottie-bot/internal/player"
 )
 
-// -- INITIALIZER --
+// -- BOOTSTRAP --
 
 // SEE https://github.com/KittyBot-Org/KittyBotGo/blob/master/service/bot/commands/player.go
 func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationCommandCreate {
@@ -103,31 +101,6 @@ type MusicHandler struct {
 	Player *player.Player
 }
 
-func (h *MusicHandler) musicPlay(id snowflake.ID, tracks []lavalink.Track, e *handler.CommandEvent) error {
-	client := e.Client()
-	_, ok := client.Caches().VoiceState(*e.GuildID(), e.ApplicationID())
-	if !ok {
-		err := client.UpdateVoiceState(context.Background(), *e.GuildID(), &id, false, false)
-		if err != nil {
-			_, err = e.UpdateInteractionResponse(*message(&discord.MessageUpdate{}, err.Error(), MessageTypeError, 0))
-			return err
-		}
-	}
-
-	err := h.Player.Add(e.Ctx, *e.GuildID(), e.Channel().ID(), e.User(), tracks...)
-	if err != nil {
-		_, err = e.UpdateInteractionResponse(*message(&discord.MessageUpdate{}, err.Error(), MessageTypeError, 0))
-		return err
-	}
-
-	_, err = e.UpdateInteractionResponse(*message(&discord.MessageUpdate{}, fmt.Sprintf("Added %d songs to the queue", len(tracks)), MessageTypeDefault, 0))
-	if err != nil {
-		return err
-	}
-
-	return err
-}
-
 // NOTE:
 // This isn't as easy as you would first expect.
 func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handler.CommandEvent) error {
@@ -156,25 +129,36 @@ func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handl
 		return err
 	}
 
-	h.Player.Search(e.Ctx, *e.GuildID(), q, disgolink.NewResultHandler(
-		func(track lavalink.Track) {
-			err = h.musicPlay(*vs.ChannelID, []lavalink.Track{track}, e)
-		},
-		func(playlist lavalink.Playlist) {
-			err = h.musicPlay(*vs.ChannelID, playlist.Tracks, e)
-		},
-		func(tracks []lavalink.Track) {
-			err = h.musicPlay(*vs.ChannelID, []lavalink.Track{tracks[0]}, e)
-		},
-		func() {
-			_, err = e.UpdateInteractionResponse(*message(&discord.MessageUpdate{}, fmt.Sprintf("No results found for %s", q), MessageTypeDefault, 0))
+	h.Player.Search(e.Ctx, *e.GuildID(), q,
+		func(tracks ...lavalink.Track) {
+			if len(tracks) == 0 {
+				e.UpdateInteractionResponse(*message(&discord.MessageUpdate{}, fmt.Sprintf("No results found for %s", q), MessageTypeDefault, 0))
+				return
+			}
+
+			_, ok := client.Caches().VoiceState(*e.GuildID(), e.ApplicationID())
+			if !ok {
+				err := client.UpdateVoiceState(context.Background(), *e.GuildID(), vs.ChannelID, false, false)
+				if err != nil {
+					e.UpdateInteractionResponse(*message(&discord.MessageUpdate{}, err.Error(), MessageTypeError, 0))
+					return
+				}
+			}
+
+			err := h.Player.Add(e.Ctx, *e.GuildID(), e.Channel().ID(), e.User(), tracks...)
+			if err != nil {
+				e.UpdateInteractionResponse(*message(&discord.MessageUpdate{}, err.Error(), MessageTypeError, 0))
+				return
+			}
+
+			e.UpdateInteractionResponse(*message(&discord.MessageUpdate{}, fmt.Sprintf("Added %d songs to the queue", len(tracks)), MessageTypeDefault, 0))
 		},
 		func(err error) {
-			_, err = e.UpdateInteractionResponse(*message(&discord.MessageUpdate{}, err.Error(), MessageTypeError, 0))
+			e.UpdateInteractionResponse(*message(&discord.MessageUpdate{}, err.Error(), MessageTypeError, 0))
 		},
-	))
+	)
 
-	return err
+	return nil
 }
 
 func (h *MusicHandler) onSkipButton(e *handler.ComponentEvent) error {

@@ -139,9 +139,28 @@ func (p *Player) ChannelID(guildID snowflake.ID) *snowflake.ID {
 
 // TODO:
 // This can probably be waaaay improved
-func (p *Player) Search(ctx context.Context, guildID snowflake.ID, query string, cb disgolink.AudioLoadResultHandler) {
+type SearchResultHandler func(tracks ...lavalink.Track)
+type SearchResultErrorHandler func(err error)
+
+func (p *Player) Search(ctx context.Context, guildID snowflake.ID, query string, onResult SearchResultHandler, onError SearchResultErrorHandler) {
 	lp := p.Lavalink.Player(guildID)
-	lp.Node().LoadTracksHandler(ctx, query, cb)
+	lp.Node().LoadTracksHandler(ctx, query, disgolink.NewResultHandler(
+		func(track lavalink.Track) {
+			onResult(track)
+		},
+		func(playlist lavalink.Playlist) {
+			onResult(playlist.Tracks...)
+		},
+		func(tracks []lavalink.Track) {
+			onResult(tracks[0])
+		},
+		func() {
+			onResult()
+		},
+		func(err error) {
+			onError(err)
+		},
+	))
 }
 
 func (p *Player) Add(ctx context.Context, guildID snowflake.ID, channelID snowflake.ID, user discord.User, tracks ...lavalink.Track) error {
