@@ -8,6 +8,9 @@ plugins:
     allowSearch: true
     allowDirectVideoIds: true
     allowDirectPlaylistIds: true
+    #oauth:
+    #  enabled: true
+    #  refreshToken: **
     clients:
       - MUSIC
       #- TV

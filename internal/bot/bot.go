@@ -13,7 +13,6 @@ import (
 	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/disgolink/v3/disgolink"
 	"github.com/disgoorg/lavaqueue-plugin"
-	"github.com/disgoorg/snowflake/v2"
 	"github.com/mroctopus/bottie-bot/internal/config"
 	"github.com/mroctopus/bottie-bot/internal/player"
 )
@@ -22,16 +21,14 @@ type RobotoBot struct {
 	// Config
 	Config *config.RobotoConfig
 	// Clients
-	Discord  bot.Client
-	Lavalink disgolink.Client // TODO: Add message cache mapping here for lavalink handler to use
-	// More
-	LavalinkTrackMessages map[snowflake.ID]player.TrackMessageData
+	Discord bot.Client
+	Player  *player.Player
 }
 
 func (b *RobotoBot) Start(cmds []discord.ApplicationCommandCreate, r *handler.Mux) error {
 	var wgBot sync.WaitGroup
 
-	if b.Lavalink != nil {
+	if b.Player != nil {
 		wgBot.Add(1)
 		go func() {
 			defer wgBot.Done()
@@ -47,7 +44,7 @@ func (b *RobotoBot) Start(cmds []discord.ApplicationCommandCreate, r *handler.Mu
 					ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 					defer cancel()
 
-					_, err := b.Lavalink.AddNode(ctx, disgolink.NodeConfig{
+					_, err := b.Player.Lavalink.AddNode(ctx, disgolink.NodeConfig{
 						Name:     node.Name,
 						Address:  node.Address,
 						Password: node.Password,
@@ -83,8 +80,8 @@ func (b *RobotoBot) Start(cmds []discord.ApplicationCommandCreate, r *handler.Mu
 
 func (b *RobotoBot) Stop() {
 	b.Discord.Close(context.Background())
-	if b.Lavalink != nil {
-		b.Lavalink.Close()
+	if b.Player != nil {
+		b.Player.Lavalink.Close()
 	}
 }
 
@@ -106,19 +103,14 @@ func New(cfg *config.RobotoConfig) (*RobotoBot, error) {
 				cache.FlagVoiceStates,
 			),
 		),
-		bot.WithEventListenerFunc(roboto.OnDiscordEvent),
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	if cfg.Lavalink != nil {
-		lavalink := disgolink.New(discord.ApplicationID(),
-			disgolink.WithListenerFunc(roboto.OnLavalinkEvent),
-			disgolink.WithPlugins(lavaqueue.New()),
-		)
-		roboto.Lavalink = lavalink
-		roboto.LavalinkTrackMessages = make(map[snowflake.ID]player.TrackMessageData)
+		lavalink := disgolink.New(discord.ApplicationID(), disgolink.WithPlugins(lavaqueue.New()))
+		roboto.Player = player.New(discord, lavalink)
 	}
 	roboto.Discord = discord
 
