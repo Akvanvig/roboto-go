@@ -5,6 +5,8 @@ github.com/disgoorg/disgo v0.18.15 h1:T24I/NdUUody4FDvb8YkhSxHtsgRKD8Ui5Vi5PXnIr
 github.com/disgoorg/disgo v0.18.15/go.mod h1:dXYVH059d6aK7mI+Nh/3svSRWedNd09P7C2VX3RqbJY=
 github.com/disgoorg/disgolink/v3 v3.0.3 h1:9eHV5lVAGtPzDHjp3IJJ5xdWcFEjc24VJZWsA1341Wo=
 github.com/disgoorg/disgolink/v3 v3.0.3/go.mod h1:34D/dfdfrj08fSjtdKSXYz1TsMcjrX2RKoSpdxG3lHo=
+github.com/disgoorg/disgolink/v3 v3.0.4 h1:ymSb9PPbgvA1zQBkecnopRBB+ybJyqizLxP+SCoRfpM=
+github.com/disgoorg/disgolink/v3 v3.0.4/go.mod h1:UjHfrC4NT4vzibG3GyqtY5l3aMzFwfkU+B3RiW3AQQ8=
 github.com/disgoorg/json v1.2.0 h1:6e/j4BCfSHIvucG1cd7tJPAOp1RgnnMFSqkvZUtEd1Y=
 github.com/disgoorg/json v1.2.0/go.mod h1:BHDwdde0rpQFDVsRLKhma6Y7fTbQKub/zdGO5O9NqqA=
 github.com/disgoorg/lavaqueue-plugin v0.0.0-20250311012151-1ab98828bfae h1:1hA0tigD0Ht0dDOQUMmx/X3pqihhEIfCdAoIr9Y+mAo=
