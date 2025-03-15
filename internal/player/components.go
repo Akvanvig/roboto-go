@@ -29,7 +29,7 @@ func fmtTrackDuration(track lavalink.Track, pos lavalink.Duration) string {
 	return txt
 }
 
-func PlayerEmbedTracks(title string, simple bool, tracks ...lavalink.Track) []discord.Embed {
+func Embeds(title string, simple bool, tracks ...lavalink.Track) []discord.Embed {
 	embed := discord.Embed{
 		Author: &discord.EmbedAuthor{
 			Name:    title,
@@ -120,12 +120,11 @@ func PlayerEmbedTracks(title string, simple bool, tracks ...lavalink.Track) []di
 	return []discord.Embed{embed}
 }
 
-func PlayerComponents(queueEmpty bool) []discord.ContainerComponent {
+func Components(queueEmpty bool) []discord.ContainerComponent {
 	components := []discord.ContainerComponent{discord.ActionRowComponent{
-		//discord.NewPrimaryButton("", "/music/pause_play").WithEmoji(discord.ComponentEmoji{Name: "⏯"}),
-		discord.NewPrimaryButton("", "/music/stop").WithEmoji(discord.ComponentEmoji{Name: "⏹"}),
-		discord.NewPrimaryButton("", "/music/skip").WithEmoji(discord.ComponentEmoji{Name: "⏭"}).WithDisabled(queueEmpty),
-		discord.NewPrimaryButton("", "/music/queue").WithEmoji(discord.ComponentEmoji{Name: "📜"}).WithDisabled(queueEmpty),
+		discord.NewPrimaryButton("Skip", "/music/skip").WithEmoji(discord.ComponentEmoji{Name: "⏭"}).WithDisabled(queueEmpty),
+		discord.NewPrimaryButton("Queue", "/music/queue").WithEmoji(discord.ComponentEmoji{Name: "📜"}).WithStyle(discord.ButtonStyleSecondary).WithDisabled(queueEmpty),
+		discord.NewPrimaryButton("Stop", "/music/stop").WithEmoji(discord.ComponentEmoji{Name: "⏹"}).WithStyle(discord.ButtonStyleDanger),
 	}}
 
 	return components

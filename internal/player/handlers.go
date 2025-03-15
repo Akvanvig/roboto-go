@@ -25,15 +25,18 @@ func (p *Player) onGuildVoiceStateUpdate(e *events.GuildVoiceStateUpdate) {
 }
 
 func (p *Player) onTrackStart(lp disgolink.Player, e lavalink.TrackStartEvent) {
-	track := e.Track
+	ctx := context.Background()
+	guildID := lp.GuildID()
+
+	queue, _ := p.Queue(ctx, guildID)
 
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	channelID := p.playingChannels[lp.GuildID()]
+	channelID := p.playingChannels[guildID]
 	msg, err := p.discord.Rest().CreateMessage(channelID, discord.MessageCreate{
-		Embeds:     PlayerEmbedTracks("Now playing", false, track),
-		Components: PlayerComponents(false),
+		Embeds:     Embeds("Now playing", false, e.Track),
+		Components: Components(len(queue) < 1),
 	})
 
 	if err == nil {
@@ -42,15 +45,15 @@ func (p *Player) onTrackStart(lp disgolink.Player, e lavalink.TrackStartEvent) {
 }
 
 func (p *Player) onTrackEnd(lp disgolink.Player, e lavalink.TrackEndEvent) {
-	track := e.Track
+	guildID := lp.GuildID()
 
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	channelID := p.playingChannels[lp.GuildID()]
+	channelID := p.playingChannels[guildID]
 	messageID, ok := p.playingMessages[channelID]
 	if !ok {
-		log.Warn().Msgf("Failed to find the corresponding message for track ID '%s'", track.Info.Identifier)
+		log.Warn().Msgf("Failed to find the playing message for channel ID '%s'", channelID)
 		return
 	}
 

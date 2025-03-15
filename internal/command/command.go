@@ -34,45 +34,16 @@ func New(bot *bot.RobotoBot) ([]discord.ApplicationCommandCreate, *handler.Mux) 
 
 // -- COMMON --
 
-type MessageType int
-
 const (
-	MessageTypeDefault MessageType = iota
-	MessageTypeError
+	MessageColorDefault = 0
+	MessageColorError   = 0xd43535
 )
 
-func message[T *discord.MessageCreate | *discord.MessageUpdate](dst T, txt string, t MessageType, flags discord.MessageFlags) T {
-	var color int
-	switch t {
-	case MessageTypeError:
-		color = 0xd43535
-	case MessageTypeDefault:
-		fallthrough
-	default:
-		color = 0
-	}
-
-	embeds := []discord.Embed{
+func Embeds(text string, color int) []discord.Embed {
+	return []discord.Embed{
 		{
-			Description: txt,
+			Description: text,
 			Color:       color,
 		},
 	}
-
-	// NOTE:
-	// For the love of god, please let this proposal go through:
-	// https://github.com/golang/go/issues/45380
-	switch v := any(dst).(type) {
-	case *discord.MessageCreate:
-		v.Embeds = embeds
-		v.Flags = flags
-	case *discord.MessageUpdate:
-		v.Embeds = &embeds
-		if flags > 0 {
-			v.Flags = &flags
-		}
-		v.Components = nil
-	}
-
-	return dst
 }

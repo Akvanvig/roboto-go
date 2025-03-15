@@ -8,16 +8,10 @@ import (
 	"github.com/Akvanvig/roboto-go/internal/bot"
 	"github.com/Akvanvig/roboto-go/internal/command"
 	"github.com/Akvanvig/roboto-go/internal/config"
-	"github.com/Akvanvig/roboto-go/internal/util"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
 func main() {
-	if util.IsDev() {
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-	}
-
 	log.Info().Msg("Reading config...")
 
 	cfg, err := config.Load()

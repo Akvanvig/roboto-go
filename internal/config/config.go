@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 
-	"github.com/Akvanvig/roboto-go/internal/util"
 	"github.com/disgoorg/disgolink/v3/disgolink"
 	"gopkg.in/yaml.v3"
 )
@@ -143,14 +141,6 @@ func validate(cfg *RobotoConfig) error {
 }
 
 func Load() (*RobotoConfig, error) {
-	if util.IsDev() {
-		_, file, _, _ := runtime.Caller(0)
-		root := filepath.Join(filepath.Dir(file), "../../")
-
-		os.Setenv("BOT_CONFIG_PATH", filepath.Join(root, "config.yaml"))
-		os.Setenv("BOT_CONFIG_SECRETS_PATH", filepath.Join(root, "config_secrets.yaml"))
-	}
-
 	// Read config
 	cfg, err := load(os.Getenv("BOT_CONFIG_PATH"), "./config.yaml", "./config.yml")
 	if err != nil {

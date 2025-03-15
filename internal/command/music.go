@@ -83,11 +83,17 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 				return func(e *handler.InteractionEvent) error {
 					channelID := h.Player.ChannelID(*e.GuildID())
 					if channelID == nil {
-						return e.Respond(discord.InteractionResponseTypeCreateMessage, *message(&discord.MessageUpdate{}, "No music is currently playing", MessageTypeError, discord.MessageFlagEphemeral))
+						return e.Respond(discord.InteractionResponseTypeCreateMessage, discord.MessageUpdate{
+							Embeds: json.Ptr(Embeds("No music is currently playing", MessageColorError)),
+							Flags:  json.Ptr(discord.MessageFlagEphemeral),
+						})
 					}
 					if *channelID != e.Channel().ID() {
 						channel, _ := e.Client().Caches().Channel(*channelID)
-						return e.Respond(discord.InteractionResponseTypeCreateMessage, *message(&discord.MessageUpdate{}, fmt.Sprintf("The bot is expecting music interactions in the %s channel", channel.Mention()), MessageTypeError, discord.MessageFlagEphemeral))
+						return e.Respond(discord.InteractionResponseTypeCreateMessage, discord.MessageUpdate{
+							Embeds: json.Ptr(Embeds(fmt.Sprintf("The bot is expecting music interactions in the %s channel", channel.Mention()), MessageColorError)),
+							Flags:  json.Ptr(discord.MessageFlagEphemeral),
+						})
 					}
 
 					return next(e)
@@ -117,7 +123,10 @@ func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handl
 
 	vs, ok := client.Caches().VoiceState(*e.GuildID(), e.User().ID)
 	if !ok {
-		return e.CreateMessage(*message(&discord.MessageCreate{}, "You must be in a voice channel to queue music", MessageTypeError, discord.MessageFlagEphemeral))
+		return e.CreateMessage(discord.MessageCreate{
+			Embeds: Embeds("Must be in a voice channel to queue music", MessageColorError),
+			Flags:  discord.MessageFlagEphemeral,
+		})
 	}
 
 	src, _ := data.OptString("src")
@@ -141,7 +150,9 @@ func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handl
 	err = h.Player.Search(e.Ctx, *e.GuildID(), q,
 		func(tracks ...lavalink.Track) {
 			if len(tracks) == 0 {
-				e.UpdateInteractionResponse(*message(&discord.MessageUpdate{}, fmt.Sprintf("No results found for %s", q), MessageTypeDefault, 0))
+				e.UpdateInteractionResponse(discord.MessageUpdate{
+					Embeds: json.Ptr(Embeds(fmt.Sprintf("No results found for %s", q), MessageColorDefault)),
+				})
 				return
 			}
 
@@ -149,27 +160,35 @@ func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handl
 			if !ok {
 				err := client.UpdateVoiceState(context.Background(), *e.GuildID(), vs.ChannelID, false, false)
 				if err != nil {
-					e.UpdateInteractionResponse(*message(&discord.MessageUpdate{}, err.Error(), MessageTypeError, 0))
+					e.UpdateInteractionResponse(discord.MessageUpdate{
+						Embeds: json.Ptr(Embeds(err.Error(), MessageColorError)),
+					})
 					return
 				}
 			}
 
 			err := h.Player.Add(e.Ctx, *e.GuildID(), e.Channel().ID(), e.User(), tracks...)
 			if err != nil {
-				e.UpdateInteractionResponse(*message(&discord.MessageUpdate{}, err.Error(), MessageTypeError, 0))
+				e.UpdateInteractionResponse(discord.MessageUpdate{
+					Embeds: json.Ptr(Embeds(err.Error(), MessageColorError)),
+				})
 				return
 			}
 
 			e.UpdateInteractionResponse(discord.MessageUpdate{
-				Embeds: json.Ptr(player.PlayerEmbedTracks("Added to Queue", true, tracks...)),
+				Embeds: json.Ptr(player.Embeds("Added to queue", true, tracks...)),
 			})
 		},
 		func(err error) {
-			e.UpdateInteractionResponse(*message(&discord.MessageUpdate{}, err.Error(), MessageTypeError, 0))
+			e.UpdateInteractionResponse(discord.MessageUpdate{
+				Embeds: json.Ptr(Embeds(err.Error(), MessageColorError)),
+			})
 		},
 	)
 	if err != nil {
-		_, err = e.UpdateInteractionResponse(*message(&discord.MessageUpdate{}, "Failed to search for song", MessageTypeError, 0))
+		_, err = e.UpdateInteractionResponse(discord.MessageUpdate{
+			Embeds: json.Ptr(Embeds("Failed to search for song", MessageColorError)),
+		})
 		return err
 	}
 
@@ -180,19 +199,30 @@ func (h *MusicHandler) onVolume(data discord.SlashCommandInteractionData, e *han
 	volume := data.Int("number")
 	err := h.Player.Volume(e.Ctx, *e.GuildID(), volume)
 	if err != nil {
-		return e.CreateMessage(*message(&discord.MessageCreate{}, "Failed to adjust volume", MessageTypeError, discord.MessageFlagEphemeral))
+		return e.CreateMessage(discord.MessageCreate{
+			Embeds: Embeds("Failed to adjust volume", MessageColorError),
+			Flags:  discord.MessageFlagEphemeral,
+		})
 	}
 
-	return e.CreateMessage(*message(&discord.MessageCreate{}, fmt.Sprintf("Set volume to %d%%.", volume), MessageTypeDefault, 0))
+	return e.CreateMessage(discord.MessageCreate{
+		Embeds: Embeds(fmt.Sprintf("Set volume to %d%%.", volume), MessageColorDefault),
+	})
 }
 
 func (h *MusicHandler) onSkipButton(e *handler.ComponentEvent) error {
 	track, err := h.Player.Next(e.Ctx, *e.GuildID())
 	if err != nil {
-		return e.CreateMessage(*message(&discord.MessageCreate{}, "Failed to skip the current song", MessageTypeError, discord.MessageFlagEphemeral))
+		return e.CreateMessage(discord.MessageCreate{
+			Embeds: Embeds("Failed to skip current song", MessageColorError),
+			Flags:  discord.MessageFlagEphemeral,
+		})
 	}
 	if track == nil {
-		return e.CreateMessage(*message(&discord.MessageCreate{}, "There are no more songs in the queue", MessageTypeDefault, discord.MessageFlagEphemeral))
+		return e.CreateMessage(discord.MessageCreate{
+			Embeds: Embeds("Queue is currently empty", MessageColorDefault),
+			Flags:  discord.MessageFlagEphemeral,
+		})
 	}
 
 	e.Acknowledge()
@@ -204,24 +234,35 @@ func (h *MusicHandler) onStopButton(e *handler.ComponentEvent) error {
 
 	err := client.UpdateVoiceState(e.Ctx, *e.GuildID(), nil, false, false)
 	if err != nil {
-		return e.CreateMessage(*message(&discord.MessageCreate{}, "Failed to disconnect bot from the voice channel", MessageTypeError, discord.MessageFlagEphemeral))
+		return e.CreateMessage(discord.MessageCreate{
+			Embeds: Embeds("Failed to disconnect bot from the voice channel", MessageColorError),
+			Flags:  discord.MessageFlagEphemeral,
+		})
 	}
 
-	return e.CreateMessage(*message(&discord.MessageCreate{}, "Stopped playing music", MessageTypeDefault, 0))
+	return e.CreateMessage(discord.MessageCreate{
+		Embeds: Embeds("Stopped playing music", MessageColorDefault),
+	})
 }
 
 func (h *MusicHandler) onQueueButton(e *handler.ComponentEvent) error {
 	tracks, err := h.Player.Queue(e.Ctx, *e.GuildID())
 	if err != nil {
-		return e.CreateMessage(*message(&discord.MessageCreate{}, "Failed to get the current queue", MessageTypeError, discord.MessageFlagEphemeral))
+		return e.CreateMessage(discord.MessageCreate{
+			Embeds: Embeds("Failed to get the current queue", MessageColorError),
+			Flags:  discord.MessageFlagEphemeral,
+		})
 	}
 
 	if len(tracks) == 0 {
-		return e.CreateMessage(*message(&discord.MessageCreate{}, "The queue is currently empty", MessageTypeDefault, discord.MessageFlagEphemeral))
+		return e.CreateMessage(discord.MessageCreate{
+			Embeds: Embeds("Queue is currently empty", MessageColorDefault),
+			Flags:  discord.MessageFlagEphemeral,
+		})
 	}
 
 	return e.CreateMessage(discord.MessageCreate{
-		Embeds: player.PlayerEmbedTracks("Next up", true, tracks...),
+		Embeds: player.Embeds("Next up", true, tracks...),
 		Flags:  discord.MessageFlagEphemeral,
 	})
 }

@@ -4,6 +4,7 @@ import (
 	"github.com/Akvanvig/roboto-go/internal/bot"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
+	"github.com/disgoorg/json"
 )
 
 // -- BOOTSTRAP --
@@ -23,7 +24,10 @@ func ownerCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 			return func(e *handler.InteractionEvent) error {
 				app, err := e.Client().Rest().GetBotApplicationInfo()
 				if err != nil {
-					return e.Respond(discord.InteractionResponseTypeCreateMessage, *message(&discord.MessageUpdate{}, "Failed to retrieve bot app info", MessageTypeError, 0))
+					return e.Respond(discord.InteractionResponseTypeCreateMessage, discord.MessageUpdate{
+						Embeds: json.Ptr(Embeds("Failed to retrieve bot app info", MessageColorError)),
+						Flags:  json.Ptr(discord.MessageFlagEphemeral),
+					})
 				}
 
 				user := e.User()
@@ -36,7 +40,10 @@ func ownerCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 					}
 				}
 
-				return e.Respond(discord.InteractionResponseTypeCreateMessage, *message(&discord.MessageUpdate{}, "Only bot owners can run this command", MessageTypeError, 0))
+				return e.Respond(discord.InteractionResponseTypeCreateMessage, discord.MessageUpdate{
+					Embeds: json.Ptr(Embeds("Only bot owners can run this command", MessageColorError)),
+					Flags:  json.Ptr(discord.MessageFlagEphemeral),
+				})
 			}
 		})
 	})

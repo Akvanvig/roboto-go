@@ -123,7 +123,7 @@ func (p *Player) Add(ctx context.Context, guildID snowflake.ID, channelID snowfl
 	} else {
 		messageID := p.playingMessages[channelID]
 		_, err = p.discord.Rest().UpdateMessage(channelID, messageID, discord.MessageUpdate{
-			Components: json.Ptr(PlayerComponents(false)),
+			Components: json.Ptr(Components(false)),
 		})
 		return err
 	}
