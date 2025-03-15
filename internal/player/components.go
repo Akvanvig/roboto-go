@@ -43,15 +43,18 @@ func Embeds(title string, simple bool, tracks ...lavalink.Track) []discord.Embed
 		track := tracks[0]
 
 		var data TrackUserData
-		err := json.Unmarshal(track.UserData, &data)
-		if err != nil {
-			// TODO
-		}
+		json.Unmarshal(track.UserData, &data)
 
 		embed.Title = track.Info.Title
-		embed.URL = *track.Info.URI
-		embed.Thumbnail = &discord.EmbedResource{
-			URL: *track.Info.ArtworkURL,
+
+		if track.Info.URI != nil {
+			embed.URL = *track.Info.URI
+		}
+
+		if track.Info.ArtworkURL != nil {
+			embed.Thumbnail = &discord.EmbedResource{
+				URL: *track.Info.ArtworkURL,
+			}
 		}
 
 		if data.User != "" {
@@ -82,10 +85,7 @@ func Embeds(title string, simple bool, tracks ...lavalink.Track) []discord.Embed
 			var tmpB strings.Builder
 			var data TrackUserData
 
-			err := json.Unmarshal(track.UserData, &data)
-			if err != nil {
-				// TODO
-			}
+			json.Unmarshal(track.UserData, &data)
 
 			tmpB.WriteString(strconv.Itoa(i + 1))
 			tmpB.WriteString(". [")
@@ -122,9 +122,9 @@ func Embeds(title string, simple bool, tracks ...lavalink.Track) []discord.Embed
 
 func Components(queueEmpty bool) []discord.ContainerComponent {
 	components := []discord.ContainerComponent{discord.ActionRowComponent{
-		discord.NewPrimaryButton("Skip", "/music/skip").WithEmoji(discord.ComponentEmoji{Name: "⏭"}).WithDisabled(queueEmpty),
-		discord.NewPrimaryButton("Queue", "/music/queue").WithEmoji(discord.ComponentEmoji{Name: "📜"}).WithStyle(discord.ButtonStyleSecondary).WithDisabled(queueEmpty),
-		discord.NewPrimaryButton("Stop", "/music/stop").WithEmoji(discord.ComponentEmoji{Name: "⏹"}).WithStyle(discord.ButtonStyleDanger),
+		discord.NewPrimaryButton("Skip", "/music/skip").WithEmoji(discord.ComponentEmoji{Name: "👉"}).WithDisabled(queueEmpty),
+		discord.NewPrimaryButton("Queue", "/music/queue").WithEmoji(discord.ComponentEmoji{Name: "👏"}).WithStyle(discord.ButtonStyleSecondary).WithDisabled(queueEmpty),
+		discord.NewPrimaryButton("Stop", "/music/stop").WithEmoji(discord.ComponentEmoji{Name: "👋"}).WithStyle(discord.ButtonStyleDanger),
 	}}
 
 	return components
