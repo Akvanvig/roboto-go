@@ -241,7 +241,7 @@ func (h *MusicHandler) onStopButton(e *handler.ComponentEvent) error {
 	}
 
 	return e.CreateMessage(discord.MessageCreate{
-		Embeds: Embeds("Stopped playing music", MessageColorDefault),
+		Embeds: Embeds(fmt.Sprintf("%s stopped the music", e.User().Mention()), MessageColorDefault),
 	})
 }
 
