@@ -137,7 +137,7 @@ func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handl
 	case "YouTube Music":
 		q = lavalink.SearchTypeYouTubeMusic.Apply(q)
 	case "YouTube":
-		fallthrough
+		// Search query as is
 	default:
 		q = lavalink.SearchTypeYouTube.Apply(q)
 	}
