@@ -94,8 +94,12 @@ func PlayerEmbedTracks(title string, simple bool, tracks ...lavalink.Track) []di
 			tmpB.WriteString(*track.Info.URI)
 			tmpB.WriteString(") (")
 			tmpB.WriteString(fmtTrackDuration(track, 0))
-			tmpB.WriteString(") (")
-			tmpB.WriteString(data.User)
+
+			if data.User != "" {
+				tmpB.WriteString(") (")
+				tmpB.WriteString(data.User)
+			}
+
 			tmpB.WriteString(")\n")
 
 			// Disscord message limit is 4000ish chars
