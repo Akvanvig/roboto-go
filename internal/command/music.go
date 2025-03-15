@@ -3,9 +3,6 @@ package command
 import (
 	"context"
 	"fmt"
-	"strconv"
-	"strings"
-	"unicode/utf8"
 
 	"github.com/Akvanvig/roboto-go/internal/bot"
 	"github.com/Akvanvig/roboto-go/internal/player"
@@ -163,7 +160,9 @@ func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handl
 				return
 			}
 
-			e.UpdateInteractionResponse(*message(&discord.MessageUpdate{}, fmt.Sprintf("Added %d songs to the queue", len(tracks)), MessageTypeDefault, 0))
+			e.UpdateInteractionResponse(discord.MessageUpdate{
+				Embeds: json.Ptr(player.PlayerEmbedTracks("Added to Queue", true, tracks...)),
+			})
 		},
 		func(err error) {
 			e.UpdateInteractionResponse(*message(&discord.MessageUpdate{}, err.Error(), MessageTypeError, 0))
@@ -221,35 +220,8 @@ func (h *MusicHandler) onQueueButton(e *handler.ComponentEvent) error {
 		return e.CreateMessage(*message(&discord.MessageCreate{}, "The queue is currently empty", MessageTypeDefault, discord.MessageFlagEphemeral))
 	}
 
-	var b strings.Builder
-
-	title := "Next up in the queue:\n"
-	numChars := utf8.RuneCountInString(title)
-
-	b.WriteString(title)
-	for i, track := range tracks {
-		var tmpB strings.Builder
-
-		tmpB.WriteString(strconv.Itoa(i + 1))
-		tmpB.WriteString(". [")
-		tmpB.WriteString(track.Info.Title)
-		tmpB.WriteString("](")
-		tmpB.WriteString(*track.Info.URI)
-		tmpB.WriteString(") (")
-		tmpB.WriteString(player.FormatTrack(track, 0))
-		tmpB.WriteString(")\n")
-
-		// Disscord message limit is 2000 chars
-		str := tmpB.String()
-		tmpNumChars := numChars + utf8.RuneCountInString(str)
-		if tmpNumChars < 2000 {
-			b.WriteString(str)
-			numChars = tmpNumChars
-		} else {
-			b.WriteString(".....")
-			break
-		}
-	}
-
-	return e.CreateMessage(*message(&discord.MessageCreate{}, b.String(), MessageTypeDefault, discord.MessageFlagEphemeral))
+	return e.CreateMessage(discord.MessageCreate{
+		Embeds: player.PlayerEmbedTracks("Next up", true, tracks...),
+		Flags:  discord.MessageFlagEphemeral,
+	})
 }

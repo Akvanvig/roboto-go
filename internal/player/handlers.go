@@ -30,11 +30,14 @@ func (p *Player) onTrackStart(lp disgolink.Player, e lavalink.TrackStartEvent) {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	channel := p.playingChannels[lp.GuildID()]
-	msg, err := p.discord.Rest().CreateMessage(channel, *Message(&discord.MessageCreate{}, "Now playing", track, true))
+	channelID := p.playingChannels[lp.GuildID()]
+	msg, err := p.discord.Rest().CreateMessage(channelID, discord.MessageCreate{
+		Embeds:     PlayerEmbedTracks("Now playing", false, track),
+		Components: PlayerComponents(false),
+	})
 
 	if err == nil {
-		p.playingMessages[track.Info.Identifier] = msg.ID
+		p.playingMessages[channelID] = msg.ID
 	}
 }
 
@@ -44,19 +47,17 @@ func (p *Player) onTrackEnd(lp disgolink.Player, e lavalink.TrackEndEvent) {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	channel := p.playingChannels[lp.GuildID()]
-	messageID, ok := p.playingMessages[track.Info.Identifier]
+	channelID := p.playingChannels[lp.GuildID()]
+	messageID, ok := p.playingMessages[channelID]
 	if !ok {
 		log.Warn().Msgf("Failed to find the corresponding message for track ID '%s'", track.Info.Identifier)
 		return
 	}
 
-	err := p.discord.Rest().DeleteMessage(channel, messageID)
+	err := p.discord.Rest().DeleteMessage(channelID, messageID)
 	if err != nil {
-		log.Warn().Err(err).Msgf("Failed to delete the message with ID '%s' in channel ID '%s'", messageID, channel)
+		log.Warn().Err(err).Msgf("Failed to delete the message with ID '%s' in channel ID '%s'", messageID, channelID)
 	}
-
-	delete(p.playingMessages, track.Info.Identifier)
 }
 
 func (p *Player) onTrackException(lp disgolink.Player, e lavalink.TrackExceptionEvent) {
@@ -82,5 +83,9 @@ func (p *Player) onWebSocketClosed(lp disgolink.Player, e lavalink.WebSocketClos
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	delete(p.playingChannels, lp.GuildID())
+	guildID := lp.GuildID()
+	channelID := p.playingChannels[guildID]
+
+	delete(p.playingChannels, guildID)
+	delete(p.playingMessages, channelID)
 }

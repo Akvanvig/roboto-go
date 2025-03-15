@@ -2,11 +2,12 @@ package player
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/disgoorg/json"
 
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/discord"
@@ -22,103 +23,11 @@ type TrackUserData struct {
 	Timestamp   time.Time `json:"timestamp"`
 }
 
-func FormatDuration(duration lavalink.Duration) string {
-	if duration == 0 {
-		return "00:00"
-	}
-	return fmt.Sprintf("%02d:%02d", duration.Minutes(), duration.SecondsPart())
-}
-
-func FormatTrack(track lavalink.Track, pos lavalink.Duration) string {
-	var txt string
-	if pos > 0 {
-		txt = fmt.Sprintf("`%s/%s`", FormatDuration(pos), FormatDuration(track.Info.Length))
-	} else {
-		txt = fmt.Sprintf("`%s`", FormatDuration(track.Info.Length))
-	}
-
-	return txt
-}
-
-func Message[T *discord.MessageCreate | *discord.MessageUpdate](dst T, txt string, track lavalink.Track, buttons bool) T {
-
-	var embeds []discord.Embed
-	{
-		var data TrackUserData
-		err := json.Unmarshal(track.UserData, &data)
-		if err != nil {
-			// TODO
-		}
-
-		var url string
-		if track.Info.URI != nil {
-			url = *track.Info.URI
-		}
-
-		var thumbnail *discord.EmbedResource
-		if track.Info.ArtworkURL != nil {
-			thumbnail = &discord.EmbedResource{
-				URL: *track.Info.ArtworkURL,
-			}
-		}
-
-		embeds = []discord.Embed{
-			{
-				Author: &discord.EmbedAuthor{
-					Name:    txt,
-					IconURL: "https://media.tenor.com/V0PyK4xovxAAAAAC/peepo-dance-pepe.gif",
-				},
-				Title:     track.Info.Title,
-				URL:       url,
-				Thumbnail: thumbnail,
-				Fields: []discord.EmbedField{
-					{
-						Name:  "Uploader",
-						Value: track.Info.Author,
-					},
-					{
-						Name:  "Length",
-						Value: FormatTrack(track, 0),
-					},
-				},
-				Footer: &discord.EmbedFooter{
-					Text:    data.User,
-					IconURL: data.UserIconURL,
-				},
-				Timestamp: &data.Timestamp,
-				Color:     0,
-			},
-		}
-	}
-
-	var components []discord.ContainerComponent
-	if buttons {
-		components = []discord.ContainerComponent{discord.ActionRowComponent{
-			//discord.NewPrimaryButton("", "/music/pause_play").WithEmoji(discord.ComponentEmoji{Name: "⏯"}),
-			discord.NewPrimaryButton("", "/music/skip").WithEmoji(discord.ComponentEmoji{Name: "⏭"}),
-			discord.NewPrimaryButton("", "/music/stop").WithEmoji(discord.ComponentEmoji{Name: "⏹"}),
-			discord.NewPrimaryButton("", "/music/queue").WithEmoji(discord.ComponentEmoji{Name: "📜"}),
-		}}
-	}
-
-	switch t := any(dst).(type) {
-	case *discord.MessageCreate:
-		t.Embeds = embeds
-		t.Components = components
-
-	case *discord.MessageUpdate:
-		t.Embeds = &embeds
-		t.Components = &components
-	}
-
-	return dst
-}
-
 type Player struct {
 	discord         bot.Client
 	lavalink        disgolink.Client
 	playingChannels map[snowflake.ID]snowflake.ID
-	playingMessages map[string]snowflake.ID
+	playingMessages map[snowflake.ID]snowflake.ID
 	// NOTE:
 	// This mutex is currently global, but it should be per guild
 	m sync.Mutex
@@ -144,8 +53,6 @@ func (p *Player) Volume(ctx context.Context, guildID snowflake.ID, volume int) e
 	return lp.Update(ctx, lavalink.WithVolume(volume))
 }
 
-// TODO:
-// This can probably be waaaay improved
 type SearchResultHandler func(tracks ...lavalink.Track)
 type SearchResultErrorHandler func(err error)
 
@@ -208,19 +115,17 @@ func (p *Player) Add(ctx context.Context, guildID snowflake.ID, channelID snowfl
 		return err
 	}
 
+	// NOTE:
+	// Track != nil -> Song is currently playing
+	// Track == nil -> Song has been added to queue
 	if track != nil {
 		p.playingChannels[guildID] = channelID
 	} else {
-		// TODO:
-		// We should disable and enable the buttons depending on the queue state
-		/*id := p.playingMessages[guildID]
-		p.discord.Rest().UpdateMessage(channelID, id, discord.MessageUpdate{
-			Components: &[]discord.ContainerComponent{discord.ActionRowComponent{
-				discord.NewPrimaryButton("", "/music/skip").WithEmoji(discord.ComponentEmoji{Name: "⏭"}),
-				discord.NewPrimaryButton("", "/music/stop").WithEmoji(discord.ComponentEmoji{Name: "⏹"}),
-				discord.NewPrimaryButton("", "/music/queue").WithEmoji(discord.ComponentEmoji{Name: "📜"}),
-			}},
-		})*/
+		messageID := p.playingMessages[channelID]
+		_, err = p.discord.Rest().UpdateMessage(channelID, messageID, discord.MessageUpdate{
+			Components: json.Ptr(PlayerComponents(false)),
+		})
+		return err
 	}
 
 	return nil
@@ -233,7 +138,8 @@ func (p *Player) Queue(ctx context.Context, guildID snowflake.ID) ([]lavalink.Tr
 	}
 
 	// TODO:
-	// Look into this shit
+	// Look into this shit.
+	// I.e. when are errors returned by lavaqueue?
 	queue, err := lavaqueue.GetQueue(ctx, lp.Node(), guildID)
 	if err != nil {
 		return nil, err
@@ -318,7 +224,7 @@ func New(discord bot.Client) *Player {
 		discord:         discord,
 		lavalink:        lavalink,
 		playingChannels: make(map[snowflake.ID]snowflake.ID),
-		playingMessages: make(map[string]snowflake.ID),
+		playingMessages: make(map[snowflake.ID]snowflake.ID),
 	}
 
 	discord.AddEventListeners(
