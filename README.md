@@ -1,3 +1,7 @@
-# bottie-bot
+# Roboto-Go
 
-https://github.com/topi314/LavaQueue/pull/2/files
+## TODO
+
+- Fix playlists
+- Fix livestreams
+- Fix helm chart
