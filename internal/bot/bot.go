@@ -13,8 +13,6 @@ import (
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/gateway"
 	"github.com/disgoorg/disgo/handler"
-	"github.com/disgoorg/disgolink/v3/disgolink"
-	"github.com/disgoorg/lavaqueue-plugin"
 )
 
 type RobotoBot struct {
@@ -28,6 +26,9 @@ type RobotoBot struct {
 func (b *RobotoBot) Start(cmds []discord.ApplicationCommandCreate, r *handler.Mux) error {
 	var wg sync.WaitGroup
 
+	// TODO:
+	// Proper error handling for sync commands
+	// and adding nodes
 	if b.Player != nil {
 		wg.Add(1)
 		go func() {
@@ -47,9 +48,6 @@ func (b *RobotoBot) Start(cmds []discord.ApplicationCommandCreate, r *handler.Mu
 		handler.SyncCommands(b.Discord, cmds, nil)
 	}()
 
-	// TODO:
-	// Proper error handling for sync commands
-	// and adding nodes
 	wg.Wait()
 
 	err := b.Discord.OpenGateway(context.Background())
@@ -90,11 +88,10 @@ func New(cfg *config.RobotoConfig) (*RobotoBot, error) {
 		return nil, err
 	}
 
-	if cfg.Lavalink != nil {
-		lavalink := disgolink.New(discord.ApplicationID(), disgolink.WithPlugins(lavaqueue.New()))
-		roboto.Player = player.New(discord, lavalink)
-	}
 	roboto.Discord = discord
+	if cfg.Lavalink != nil {
+		roboto.Player = player.New(discord)
+	}
 
 	return roboto, nil
 }

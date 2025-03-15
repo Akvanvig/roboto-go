@@ -10,11 +10,11 @@ plugins:
     allowDirectPlaylistIds: true
     #oauth:
     #  enabled: true
-    #  refreshToken: 
+    #  refreshToken: ""
     clients:
       - MUSIC
-      #- TV
-      #- TVHTML5EMBEDDED
+    #  - TV
+    #  - TVHTML5EMBEDDED
       - WEB
       - WEBEMBEDDED 
       - MWEB
@@ -24,7 +24,7 @@ lavalink:
   plugins:
   - dependency: "dev.lavalink.youtube:youtube-plugin:1.11.5"
     snapshot: false
-  - dependency: "com.github.topi314.lavaqueue:lavaqueue-plugin:d10820e"
+  - dependency: "com.github.topi314.lavaqueue:lavaqueue-plugin:5d6ca70"
     repository: "https://maven.topi.wtf/snapshots"
     snapshot: false
   server:

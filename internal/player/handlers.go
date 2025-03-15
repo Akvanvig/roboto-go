@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/disgolink/v3/disgolink"
@@ -13,88 +12,75 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// TODO:
-// Investigate if we can handle the bot being kicked?
-func (p *Player) OnDiscordEvent(event bot.Event) {
-	switch e := event.(type) {
-	case *events.VoiceServerUpdate:
-		if e.Endpoint == nil {
-			return
-		}
+func (p *Player) onVoiceServerUpdate(e *events.VoiceServerUpdate) {
+	if e.Endpoint != nil {
 		p.lavalink.OnVoiceServerUpdate(context.Background(), e.GuildID, e.Token, *e.Endpoint)
-	case *events.GuildVoiceStateUpdate:
-		if e.VoiceState.UserID != e.Client().ApplicationID() {
-			return
-		}
+	}
+}
+
+func (p *Player) onGuildVoiceStateUpdate(e *events.GuildVoiceStateUpdate) {
+	if e.VoiceState.UserID == e.Client().ApplicationID() {
 		p.lavalink.OnVoiceStateUpdate(context.Background(), e.VoiceState.GuildID, e.VoiceState.ChannelID, e.VoiceState.SessionID)
 	}
 }
 
-func (p *Player) OnLavalinkEvent(lp disgolink.Player, event lavalink.Event) {
-	switch e := event.(type) {
-	case lavalink.TrackStartEvent:
-		log.Debug().Msg("TRACK START")
+func (p *Player) onTrackStart(lp disgolink.Player, e lavalink.TrackStartEvent) {
+	track := e.Track
 
-		track := e.Track
+	p.m.Lock()
+	defer p.m.Unlock()
 
-		p.m.Lock()
-		defer p.m.Unlock()
+	channel := p.playingChannels[lp.GuildID()]
+	msg, err := p.discord.Rest().CreateMessage(channel, *Message(&discord.MessageCreate{}, "Now playing", track, true))
 
-		channel := p.playingChannels[lp.GuildID()]
-		msg, err := p.discord.Rest().CreateMessage(channel, *Message(&discord.MessageCreate{}, "Now playing", track, true))
-
-		if err == nil {
-			p.playingMessages[track.Info.Identifier] = msg.ID
-		}
-
-	case lavalink.TrackExceptionEvent:
-		log.Debug().Msg("TRACK EXCEPTION")
-		_ = e.Track
-		// Fallthrough here (which is sadly impossible)
-	case lavalink.TrackEndEvent:
-		log.Debug().Msg("TRACK ENDING")
-		track := e.Track
-
-		p.m.Lock()
-		defer p.m.Unlock()
-
-		channel := p.playingChannels[lp.GuildID()]
-		messageID, ok := p.playingMessages[track.Info.Identifier]
-		if !ok {
-			log.Warn().Msgf("Failed to find the corresponding message for track ID '%s'", track.Info.Identifier)
-			return
-		}
-
-		err := p.discord.Rest().DeleteMessage(channel, messageID)
-		if err != nil {
-			log.Warn().Err(err).Msgf("Failed to delete the message with ID '%s' in channel ID '%s'", messageID, channel)
-		}
-
-		delete(p.playingMessages, track.Info.Identifier)
-
-	case lavalink.TrackStuckEvent:
-		log.Debug().Msg("TRACK STUCK")
-		// TODO
-	case lavaqueue.QueueEndEvent:
-		log.Debug().Msg("ENDING QUEUE")
-
-		go func() {
-			time.Sleep(time.Second * 10)
-			track := lp.Track()
-			if track == nil {
-				p.m.Lock()
-				defer p.m.Unlock()
-
-				ctx := context.Background()
-				err := lp.Destroy(ctx)
-				if err != nil {
-					log.Warn().Err(err).Msg("Failed to stop the music player")
-				}
-
-				delete(p.playingChannels, lp.GuildID())
-				_ = p.discord.UpdateVoiceState(ctx, e.GuildID(), nil, false, false)
-			}
-
-		}()
+	if err == nil {
+		p.playingMessages[track.Info.Identifier] = msg.ID
 	}
+}
+
+func (p *Player) onTrackEnd(lp disgolink.Player, e lavalink.TrackEndEvent) {
+	track := e.Track
+
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	channel := p.playingChannels[lp.GuildID()]
+	messageID, ok := p.playingMessages[track.Info.Identifier]
+	if !ok {
+		log.Warn().Msgf("Failed to find the corresponding message for track ID '%s'", track.Info.Identifier)
+		return
+	}
+
+	err := p.discord.Rest().DeleteMessage(channel, messageID)
+	if err != nil {
+		log.Warn().Err(err).Msgf("Failed to delete the message with ID '%s' in channel ID '%s'", messageID, channel)
+	}
+
+	delete(p.playingMessages, track.Info.Identifier)
+}
+
+func (p *Player) onTrackException(lp disgolink.Player, e lavalink.TrackExceptionEvent) {
+	// A suspicious exception indicates that youtube tried blocking us
+	if e.Exception.Severity == lavalink.SeveritySuspicious {
+		log.Warn().Msgf("Failed to play the track '%s': %s", e.Track.Info.Title, e.Exception.Error())
+	}
+}
+
+func (p *Player) onQueueEnd(lp disgolink.Player, e lavaqueue.QueueEndEvent) {
+	go func() {
+		time.Sleep(time.Second * 10)
+		track := lp.Track()
+		if track == nil {
+			ctx := context.Background()
+			_ = p.discord.UpdateVoiceState(ctx, e.GuildID(), nil, false, false)
+		}
+
+	}()
+}
+
+func (p *Player) onWebSocketClosed(lp disgolink.Player, e lavalink.WebSocketClosedEvent) {
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	delete(p.playingChannels, lp.GuildID())
 }

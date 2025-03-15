@@ -3,6 +3,9 @@ package command
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/Akvanvig/roboto-go/internal/bot"
 	"github.com/Akvanvig/roboto-go/internal/player"
@@ -94,22 +97,10 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 				}
 			})
 
-			/*
-				r.SlashCommand("/status", h.OnPlayerStatus)
-				r.SlashCommand("/pause", h.OnPlayerPause)
-				r.SlashCommand("/resume", h.OnPlayerResume)
-				r.SlashCommand("/stop", h.OnPlayerStop)
-				r.SlashCommand("/previous", h.OnPlayerPrevious)
-				r.SlashCommand("/volume", h.OnPlayerVolume)
-				r.SlashCommand("/bass-boost", h.OnPlayerBassBoost)
-				r.SlashCommand("/seek", h.OnPlayerSeek)
-				r.Component("/previous", h.OnPlayerPreviousButton)
-				r.Component("/pause_play", h.OnPlayerPlayPauseButton)
-			*/
-			r.SlashCommand("/queue", h.onQueue)
 			r.SlashCommand("/volume", h.onVolume)
 			r.Component("/skip", h.onSkipButton)
 			r.Component("/stop", h.onStopButton)
+			r.Component("/queue", h.onQueueButton)
 		})
 	})
 
@@ -186,28 +177,23 @@ func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handl
 	return nil
 }
 
-func (h *MusicHandler) onQueue(data discord.SlashCommandInteractionData, e *handler.CommandEvent) error {
-	// TODO
-	return nil
-}
-
 func (h *MusicHandler) onVolume(data discord.SlashCommandInteractionData, e *handler.CommandEvent) error {
-	volume := data.Int("volume")
+	volume := data.Int("number")
 	err := h.Player.Volume(e.Ctx, *e.GuildID(), volume)
 	if err != nil {
-		return e.CreateMessage(*message(&discord.MessageCreate{}, "Failed to adjust the volume", MessageTypeError, 0))
+		return e.CreateMessage(*message(&discord.MessageCreate{}, "Failed to adjust volume", MessageTypeError, discord.MessageFlagEphemeral))
 	}
 
-	return e.CreateMessage(*message(&discord.MessageCreate{}, fmt.Sprintf("Set the volume to %d%%.", volume), MessageTypeDefault, 0))
+	return e.CreateMessage(*message(&discord.MessageCreate{}, fmt.Sprintf("Set volume to %d%%.", volume), MessageTypeDefault, 0))
 }
 
 func (h *MusicHandler) onSkipButton(e *handler.ComponentEvent) error {
 	track, err := h.Player.Next(e.Ctx, *e.GuildID())
 	if err != nil {
-		return e.CreateMessage(*message(&discord.MessageCreate{}, "Failed to skip the current song", MessageTypeError, 0))
+		return e.CreateMessage(*message(&discord.MessageCreate{}, "Failed to skip the current song", MessageTypeError, discord.MessageFlagEphemeral))
 	}
 	if track == nil {
-		return e.CreateMessage(*message(&discord.MessageCreate{}, "No more songs in the queue", MessageTypeDefault, 0))
+		return e.CreateMessage(*message(&discord.MessageCreate{}, "There are no more songs in the queue", MessageTypeDefault, discord.MessageFlagEphemeral))
 	}
 
 	e.Acknowledge()
@@ -216,17 +202,54 @@ func (h *MusicHandler) onSkipButton(e *handler.ComponentEvent) error {
 
 func (h *MusicHandler) onStopButton(e *handler.ComponentEvent) error {
 	client := e.Client()
-	err := h.Player.Stop(e.Ctx, *e.GuildID())
+
+	err := client.UpdateVoiceState(e.Ctx, *e.GuildID(), nil, false, false)
 	if err != nil {
-		return e.CreateMessage(*message(&discord.MessageCreate{}, "Failed to stop the music player", MessageTypeError, 0))
+		return e.CreateMessage(*message(&discord.MessageCreate{}, "Failed to disconnect bot from the voice channel", MessageTypeError, discord.MessageFlagEphemeral))
 	}
 
-	err = client.UpdateVoiceState(e.Ctx, *e.GuildID(), nil, false, false)
-	if err != nil {
-		return e.CreateMessage(*message(&discord.MessageCreate{}, "Failed to disconnect bot from the voice channel", MessageTypeError, 0))
-	}
-
-	// TODO:
-	// Look into this
 	return e.CreateMessage(*message(&discord.MessageCreate{}, "Stopped playing music", MessageTypeDefault, 0))
+}
+
+func (h *MusicHandler) onQueueButton(e *handler.ComponentEvent) error {
+	tracks, err := h.Player.Queue(e.Ctx, *e.GuildID())
+	if err != nil {
+		return e.CreateMessage(*message(&discord.MessageCreate{}, "Failed to get the current queue", MessageTypeError, discord.MessageFlagEphemeral))
+	}
+
+	if len(tracks) == 0 {
+		return e.CreateMessage(*message(&discord.MessageCreate{}, "The queue is currently empty", MessageTypeDefault, discord.MessageFlagEphemeral))
+	}
+
+	var b strings.Builder
+
+	title := "Next up in the queue:\n"
+	numChars := utf8.RuneCountInString(title)
+
+	b.WriteString(title)
+	for i, track := range tracks {
+		var tmpB strings.Builder
+
+		tmpB.WriteString(strconv.Itoa(i + 1))
+		tmpB.WriteString(". [")
+		tmpB.WriteString(track.Info.Title)
+		tmpB.WriteString("](")
+		tmpB.WriteString(*track.Info.URI)
+		tmpB.WriteString(") (")
+		tmpB.WriteString(player.FormatTrack(track, 0))
+		tmpB.WriteString(")\n")
+
+		// Disscord message limit is 2000 chars
+		str := tmpB.String()
+		tmpNumChars := numChars + utf8.RuneCountInString(str)
+		if tmpNumChars < 2000 {
+			b.WriteString(str)
+			numChars = tmpNumChars
+		} else {
+			b.WriteString(".....")
+			break
+		}
+	}
+
+	return e.CreateMessage(*message(&discord.MessageCreate{}, b.String(), MessageTypeDefault, discord.MessageFlagEphemeral))
 }
