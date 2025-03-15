@@ -205,12 +205,21 @@ func (p *Player) AddNodes(ctx context.Context, configs ...disgolink.NodeConfig) 
 }
 
 func (p *Player) Close() {
-	//p.m.Lock()
-	//defer p.m.Unlock()
-
-	// TODO:
-	// Investigate if this causes our handlers to be fucked?
 	p.lavalink.Close()
+
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	// NOTE:
+	// We gracefully clean up sent messages to avoid user confusion.
+	for channelID, messageID := range p.playingMessages {
+		p.discord.Rest().DeleteMessage(channelID, messageID)
+		delete(p.playingMessages, channelID)
+	}
+
+	for guildID := range p.playingChannels {
+		delete(p.playingChannels, guildID)
+	}
 }
 
 func New(discord bot.Client) *Player {
