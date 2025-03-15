@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"github.com/Akvanvig/roboto-go/internal/bot"
 	"github.com/Akvanvig/roboto-go/internal/player"
@@ -10,11 +11,34 @@ import (
 	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/disgolink/v3/lavalink"
 	"github.com/disgoorg/json"
+	"github.com/rs/zerolog/log"
 )
+
+// See https://github.com/lavalink-devs/youtube-source/blob/ae2b8b316bcd2b2188652d682d2f7fb7dcbbcfd3/common/src/main/java/dev/lavalink/youtube/YoutubeAudioSourceManager.java#L42
+var RegexpYoutubeURL *regexp.Regexp
+var RegexpYoutubeURLAlt *regexp.Regexp
+
+func init() {
+	protocol := "(?:http://|https://|)"
+	domain := "(?:www\\.|m\\.|music\\.|)youtube\\.com"
+	domainShort := "(?:www\\.|)youtu\\.be"
+
+	regexpYoutube, err := regexp.Compile("^" + protocol + domain + "/.*")
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to compile youtube regexp")
+	}
+
+	regexpYoutubeAlt, err := regexp.Compile("^" + protocol + "(?:" + domain + "/(?:live|embed|shorts)|" + domainShort + ")/(?<videoId>.*)")
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to compile youtube regexp")
+	}
+
+	RegexpYoutubeURL = regexpYoutube
+	RegexpYoutubeURLAlt = regexpYoutubeAlt
+}
 
 // -- BOOTSTRAP --
 
-// SEE https://github.com/KittyBot-Org/KittyBotGo/blob/master/service/bot/commands/player.go
 func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationCommandCreate {
 	if bot.Player == nil {
 		return nil
@@ -38,12 +62,8 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 					},
 					discord.ApplicationCommandOptionString{
 						Name:        "src",
-						Description: "The search source, default is YouTube",
+						Description: "The alternative search source to use, default is YouTube",
 						Choices: []discord.ApplicationCommandOptionChoiceString{
-							{
-								Name:  "YouTube",
-								Value: string(lavalink.SearchTypeYouTube),
-							},
 							{
 								Name:  "YouTube Music",
 								Value: string(lavalink.SearchTypeYouTubeMusic),
@@ -116,8 +136,6 @@ type MusicHandler struct {
 	Player *player.Player
 }
 
-// NOTE:
-// This isn't as easy as you would first expect.
 func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handler.CommandEvent) error {
 	client := e.Client()
 
@@ -136,10 +154,11 @@ func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handl
 		q = lavalink.SearchTypeSoundCloud.Apply(q)
 	case "YouTube Music":
 		q = lavalink.SearchTypeYouTubeMusic.Apply(q)
-	case "YouTube":
-		// Search query as is
 	default:
-		q = lavalink.SearchTypeYouTube.Apply(q)
+		// If the query is a direct link, we just send the url directly
+		if !RegexpYoutubeURL.MatchString(q) && !RegexpYoutubeURLAlt.MatchString(q) {
+			q = lavalink.SearchTypeYouTube.Apply(q)
+		}
 	}
 
 	err := e.DeferCreateMessage(false)
