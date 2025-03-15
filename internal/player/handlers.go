@@ -88,6 +88,9 @@ func (p *Player) onWebSocketClosed(lp disgolink.Player, e lavalink.WebSocketClos
 
 	guildID := lp.GuildID()
 	channelID := p.playingChannels[guildID]
+	messageID := p.playingMessages[channelID]
+
+	p.discord.Rest().DeleteMessage(channelID, messageID)
 
 	delete(p.playingChannels, guildID)
 	delete(p.playingMessages, channelID)
