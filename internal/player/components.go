@@ -35,7 +35,7 @@ func Embeds(title string, simple bool, tracks ...lavalink.Track) []discord.Embed
 			Name:    title,
 			IconURL: "https://media.tenor.com/V0PyK4xovxAAAAAC/peepo-dance-pepe.gif",
 		},
-		Color: 0,
+		Color: 0x00A8FC,
 	}
 
 	num := len(tracks)

@@ -46,7 +46,7 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 
 	cmds := discord.SlashCommandCreate{
 		Name:        "music",
-		Description: "Shows the music ??.",
+		Description: "Music commands",
 		Contexts: []discord.InteractionContextType{
 			discord.InteractionContextTypeGuild,
 		},
@@ -77,6 +77,10 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 				},
 			},
 			discord.ApplicationCommandOptionSubCommand{
+				Name:        "clear",
+				Description: "Clear the music queue",
+			},
+			discord.ApplicationCommandOptionSubCommand{
 				Name:        "volume",
 				Description: "Adjust the music volume",
 				Options: []discord.ApplicationCommandOption{
@@ -98,9 +102,10 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 	r.Route("/music", func(r handler.Router) {
 		r.SlashCommand("/play", h.onPlay)
 		r.Group(func(r handler.Router) {
-			// Middleware to check for existence of player
 			r.Use(func(next handler.Handler) handler.Handler {
 				return func(e *handler.InteractionEvent) error {
+					client := e.Client()
+
 					channelID := h.Player.ChannelID(*e.GuildID())
 					if channelID == nil {
 						return e.Respond(discord.InteractionResponseTypeCreateMessage, discord.MessageUpdate{
@@ -108,18 +113,32 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 							Flags:  json.Ptr(discord.MessageFlagEphemeral),
 						})
 					}
+
+					caches := client.Caches()
 					if *channelID != e.Channel().ID() {
-						channel, _ := e.Client().Caches().Channel(*channelID)
+						channel, _ := caches.Channel(*channelID)
 						return e.Respond(discord.InteractionResponseTypeCreateMessage, discord.MessageUpdate{
-							Embeds: json.Ptr(Embeds(fmt.Sprintf("The bot is expecting music interactions in the %s channel", channel.Mention()), MessageColorError)),
+							Embeds: json.Ptr(Embeds(fmt.Sprintf("Expecting music interactions in the %s channel", channel.Mention()), MessageColorError)),
 							Flags:  json.Ptr(discord.MessageFlagEphemeral),
 						})
+					}
+
+					vsUser, userOk := caches.VoiceState(*e.GuildID(), e.User().ID)
+					vsBot, botOk := caches.VoiceState(*e.GuildID(), e.ApplicationID())
+					if botOk {
+						if !userOk || (*vsUser.ChannelID != *vsBot.ChannelID) {
+							return e.Respond(discord.InteractionResponseTypeCreateMessage, discord.MessageUpdate{
+								Embeds: json.Ptr(Embeds("Must be in the same voice channel as the bot to interact with it", MessageColorError)),
+								Flags:  json.Ptr(discord.MessageFlagEphemeral),
+							})
+						}
 					}
 
 					return next(e)
 				}
 			})
 
+			r.SlashCommand("/clear", h.onClear)
 			r.SlashCommand("/volume", h.onVolume)
 			r.Component("/skip", h.onSkipButton)
 			r.Component("/stop", h.onStopButton)
@@ -139,10 +158,10 @@ type MusicHandler struct {
 func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handler.CommandEvent) error {
 	client := e.Client()
 
-	vs, ok := client.Caches().VoiceState(*e.GuildID(), e.User().ID)
+	vsUser, ok := client.Caches().VoiceState(*e.GuildID(), e.User().ID)
 	if !ok {
 		return e.CreateMessage(discord.MessageCreate{
-			Embeds: Embeds("Must be in a voice channel to queue music", MessageColorError),
+			Embeds: Embeds("Must be in a voice channel to queue songs", MessageColorError),
 			Flags:  discord.MessageFlagEphemeral,
 		})
 	}
@@ -175,9 +194,16 @@ func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handl
 				return
 			}
 
-			_, ok := client.Caches().VoiceState(*e.GuildID(), e.ApplicationID())
-			if !ok {
-				err := client.UpdateVoiceState(context.Background(), *e.GuildID(), vs.ChannelID, false, false)
+			vsBot, ok := client.Caches().VoiceState(*e.GuildID(), e.ApplicationID())
+			if ok {
+				if *vsUser.ChannelID != *vsBot.ChannelID {
+					e.UpdateInteractionResponse(discord.MessageUpdate{
+						Embeds: json.Ptr(Embeds("Must be in the same voice channel as the bot to interact with it", MessageColorError)),
+					})
+					return
+				}
+			} else {
+				err := client.UpdateVoiceState(context.Background(), *e.GuildID(), vsUser.ChannelID, false, false)
 				if err != nil {
 					e.UpdateInteractionResponse(discord.MessageUpdate{
 						Embeds: json.Ptr(Embeds(err.Error(), MessageColorError)),
@@ -214,6 +240,20 @@ func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handl
 	return nil
 }
 
+func (h *MusicHandler) onClear(data discord.SlashCommandInteractionData, e *handler.CommandEvent) error {
+	err := h.Player.Clear(e.Ctx, *e.GuildID())
+	if err != nil {
+		return e.CreateMessage(discord.MessageCreate{
+			Embeds: Embeds("Failed to clear queue", MessageColorError),
+			Flags:  discord.MessageFlagEphemeral,
+		})
+	}
+
+	return e.CreateMessage(discord.MessageCreate{
+		Embeds: Embeds(fmt.Sprintf("%s cleared the queue", e.User().Mention()), MessageColorDefault),
+	})
+}
+
 func (h *MusicHandler) onVolume(data discord.SlashCommandInteractionData, e *handler.CommandEvent) error {
 	volume := data.Int("number")
 	err := h.Player.Volume(e.Ctx, *e.GuildID(), volume)
@@ -225,12 +265,12 @@ func (h *MusicHandler) onVolume(data discord.SlashCommandInteractionData, e *han
 	}
 
 	return e.CreateMessage(discord.MessageCreate{
-		Embeds: Embeds(fmt.Sprintf("Set volume to %d%%.", volume), MessageColorDefault),
+		Embeds: Embeds(fmt.Sprintf("Set volume to %d%%", volume), MessageColorDefault),
 	})
 }
 
 func (h *MusicHandler) onSkipButton(e *handler.ComponentEvent) error {
-	track, err := h.Player.Next(e.Ctx, *e.GuildID())
+	track, err := h.Player.Skip(e.Ctx, *e.GuildID(), 1)
 	if err != nil {
 		return e.CreateMessage(discord.MessageCreate{
 			Embeds: Embeds("Failed to skip current song", MessageColorError),
@@ -260,7 +300,7 @@ func (h *MusicHandler) onStopButton(e *handler.ComponentEvent) error {
 	}
 
 	return e.CreateMessage(discord.MessageCreate{
-		Embeds: Embeds(fmt.Sprintf("%s stopped the music", e.User().Mention()), MessageColorDefault),
+		Embeds: Embeds(fmt.Sprintf("%s stopped the player", e.User().Mention()), MessageColorDefault),
 	})
 }
 

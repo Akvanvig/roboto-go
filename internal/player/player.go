@@ -148,7 +148,27 @@ func (p *Player) Queue(ctx context.Context, guildID snowflake.ID) ([]lavalink.Tr
 	return queue.Tracks, nil
 }
 
-func (p *Player) Next(ctx context.Context, guildID snowflake.ID) (*lavalink.Track, error) {
+func (p *Player) Clear(ctx context.Context, guildID snowflake.ID) error {
+	lp := p.lavalink.Player(guildID)
+	if lp == nil {
+		return fmt.Errorf("no active nodes")
+	}
+
+	// NOTE:
+	// The Lavaqueue plugin currently returns EOF errors
+	// on successful clear queue calls. This is a bug in the library.
+	// See https://github.com/disgoorg/lavaqueue-plugin/issues/1
+	err := lavaqueue.ClearQueue(ctx, lp.Node(), guildID)
+	if err != nil && err.Error() != "EOF" {
+		return err
+	}
+
+	return nil
+}
+
+// TODO:
+// Unsure if we can implement multi-track skips efficiently without changes to the underlying plugin
+func (p *Player) Skip(ctx context.Context, guildID snowflake.ID, num int) (*lavalink.Track, error) {
 	lp := p.lavalink.Player(guildID)
 	if lp == nil {
 		return nil, fmt.Errorf("no active nodes")

@@ -35,8 +35,8 @@ func New(bot *bot.RobotoBot) ([]discord.ApplicationCommandCreate, *handler.Mux) 
 // -- COMMON --
 
 const (
-	MessageColorDefault = 0
-	MessageColorError   = 0xd43535
+	MessageColorDefault = 0x00A8FC
+	MessageColorError   = 0xD43535
 )
 
 func Embeds(text string, color int) []discord.Embed {

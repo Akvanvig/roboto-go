@@ -19,6 +19,19 @@ plugins:
       - WEBEMBEDDED 
       - MWEB
       - ANDROID_VR
+    clientOptions:
+      TV:
+        videoLoading: false
+      TVHTML5EMBEDDED:
+        videoLoading: false
+      WEB:
+        videoLoading: false
+      WEBEMBEDDED:
+        videoLoading: false
+      MWEB:
+        videoLoading: false
+      ANDROID_VR:
+        videoLoading: false
 
 lavalink:
   plugins:
