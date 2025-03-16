@@ -37,32 +37,32 @@ func resolve(path string) (string, error) {
 }
 
 func load(paths ...string) (*RobotoConfig, error) {
-	var allErr error
+	var errs error
 
 	for i := range paths {
 		path, err := resolve(paths[i])
 		if err != nil {
-			allErr = errors.Join(allErr, err)
+			errs = errors.Join(errs, err)
 			continue
 		}
 
 		file, err := os.ReadFile(path)
 		if err != nil {
-			allErr = errors.Join(allErr, err)
+			errs = errors.Join(errs, err)
 			continue
 		}
 
 		cfg := &RobotoConfig{}
 		err = yaml.Unmarshal(file, cfg)
 		if err != nil {
-			allErr = errors.Join(allErr, fmt.Errorf("unmarshal %s: %w", path, err))
+			errs = errors.Join(errs, fmt.Errorf("unmarshal %s: %w", path, err))
 			break
 		}
 
 		return cfg, nil
 	}
 
-	return nil, allErr
+	return nil, errs
 }
 
 func merge(src *RobotoConfig, tgt *RobotoConfig) *RobotoConfig {

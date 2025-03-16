@@ -154,16 +154,7 @@ func (p *Player) Clear(ctx context.Context, guildID snowflake.ID) error {
 		return fmt.Errorf("no active nodes")
 	}
 
-	// NOTE:
-	// The Lavaqueue plugin currently returns EOF errors
-	// on successful clear queue calls. This is a bug in the library.
-	// See https://github.com/disgoorg/lavaqueue-plugin/issues/1
-	err := lavaqueue.ClearQueue(ctx, lp.Node(), guildID)
-	if err != nil && err.Error() != "EOF" {
-		return err
-	}
-
-	return nil
+	return lavaqueue.ClearQueue(ctx, lp.Node(), guildID)
 }
 
 // TODO:

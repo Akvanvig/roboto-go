@@ -6,7 +6,7 @@ require (
 	github.com/disgoorg/disgo v0.18.15
 	github.com/disgoorg/disgolink/v3 v3.0.4
 	github.com/disgoorg/json v1.2.0
-	github.com/disgoorg/lavaqueue-plugin v0.0.0-20250313002103-6c25d9f84fef
+	github.com/disgoorg/lavaqueue-plugin v0.0.0-20250316154559-b61bdca91ddf
 	github.com/disgoorg/snowflake/v2 v2.0.3
 	github.com/rs/zerolog v1.33.0
 	gopkg.in/yaml.v3 v3.0.1
