@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/Akvanvig/roboto-go/internal/bot"
 	"github.com/Akvanvig/roboto-go/internal/player"
@@ -226,7 +227,7 @@ func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handl
 		},
 		func(err error) {
 			e.UpdateInteractionResponse(discord.MessageUpdate{
-				Embeds: json.Ptr(Embeds(err.Error(), MessageColorError)),
+				Embeds: json.Ptr(Embeds(strings.TrimPrefix(err.Error(), "fault: "), MessageColorError)),
 			})
 		},
 	)
@@ -300,7 +301,7 @@ func (h *MusicHandler) onStopButton(e *handler.ComponentEvent) error {
 	}
 
 	return e.CreateMessage(discord.MessageCreate{
-		Embeds: Embeds(fmt.Sprintf("%s stopped the player", e.User().Mention()), MessageColorDefault),
+		Embeds: Embeds(fmt.Sprintf("%s stopped the music", e.User().Mention()), MessageColorDefault),
 	})
 }
 
