@@ -62,13 +62,14 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.lavalink.volumeMounts }}
           volumeMounts:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-      {{- with .Values.lavalink.volumes }}
+            - name: lavalink-storage
+              mountPath: /opt/Lavalink/plugins
       volumes:
-        {{- toYaml . | nindent 8 }}
+      {{- if ( not .Values.lavalink.persistance ) }}
+          - name: lavalink-storage
+            emptyDir:
+              sizeLimit: 10Gi
       {{- end }}
       {{- with .Values.lavalink.nodeSelector }}
       nodeSelector:
@@ -82,3 +83,14 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+  {{- if .Values.lavalink.persistance }}
+  volumeClaimTemplates:
+  - metadata:
+      name: lavalink-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: {{- .Values.lavalink.storageClass }}
+      resources:
+        requests:
+          storage: {{- .Values.lavalink.storage }}
+  {{- end }}
