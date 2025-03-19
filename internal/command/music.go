@@ -167,12 +167,13 @@ func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handl
 		})
 	}
 
-	src, _ := data.OptString("src")
+	src := data.String("src")
 	q := data.String("query")
+
 	switch src {
-	case "SoundCloud":
+	case string(lavalink.SearchTypeSoundCloud):
 		q = lavalink.SearchTypeSoundCloud.Apply(q)
-	case "YouTube Music":
+	case string(lavalink.SearchTypeYouTubeMusic):
 		q = lavalink.SearchTypeYouTubeMusic.Apply(q)
 	default:
 		// If the query is a direct link, we just send the url directly
