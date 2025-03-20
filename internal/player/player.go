@@ -69,8 +69,14 @@ func (p *Player) Search(ctx context.Context, guildID snowflake.ID, query string,
 		func(playlist lavalink.Playlist) {
 			onResult(playlist.Tracks...)
 		},
+		// NOTE:
+		// SoundCloud uses the wrong handler for empty search results
 		func(tracks []lavalink.Track) {
-			onResult(tracks[0])
+			if len(tracks) > 0 {
+				onResult(tracks[0])
+			} else {
+				onResult()
+			}
 		},
 		func() {
 			onResult()
