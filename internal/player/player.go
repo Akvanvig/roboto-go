@@ -44,6 +44,58 @@ func (p *Player) ChannelID(guildID snowflake.ID) *snowflake.ID {
 	return &channelID
 }
 
+type FilterType string
+
+const (
+	FilterTypeKaraoke FilterType = "karaoke"
+	FilterTypeVibrato FilterType = "vibrato"
+)
+
+// See https://github.com/CyberFlameGO/Lavalink-Client/tree/3ea412523817694cae8cc93ba2cc5f5c941f767c/src/main/java/lavalink/client/io/filters
+func (p *Player) Filter(ctx context.Context, guildID snowflake.ID, filter FilterType) (bool, error) {
+	lp := p.lavalink.Player(guildID)
+	if lp == nil {
+		return false, fmt.Errorf("no active nodes")
+	}
+
+	// NOTE:
+	// Filters doesn't unmarshal correctly...
+	// Need to check with the library creator if this is also bugged :(
+	//filters := lp.Filters()
+	enabled := false
+
+	switch filter {
+	/*
+		case FilterTypeKaraoke:
+			enabled = !(filters.Karaoke != nil)
+			if enabled {
+				filters.Karaoke = &lavalink.Karaoke{
+					Level:       1.0,
+					MonoLevel:   1.0,
+					FilterBand:  220.0,
+					FilterWidth: 100.0,
+				}
+			} else {
+				filters.Karaoke = nil
+			}
+		case FilterTypeVibrato:
+			enabled = !(filters.Vibrato != nil)
+			if enabled {
+				filters.Vibrato = &lavalink.Vibrato{
+					Frequency: 2.0,
+					Depth:     0.5,
+				}
+			} else {
+				filters.Vibrato = nil
+			}
+	*/
+	default:
+		return enabled, fmt.Errorf("currently unsupported filter type: %s", filter)
+	}
+
+	//return enabled, lp.Update(ctx, lavalink.WithFilters(filters))
+}
+
 func (p *Player) Volume(ctx context.Context, guildID snowflake.ID, volume int) error {
 	lp := p.lavalink.Player(guildID)
 	if lp == nil {
@@ -160,18 +212,30 @@ func (p *Player) Clear(ctx context.Context, guildID snowflake.ID) error {
 		return fmt.Errorf("no active nodes")
 	}
 
-	return lavaqueue.ClearQueue(ctx, lp.Node(), guildID)
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	err := lavaqueue.ClearQueue(ctx, lp.Node(), guildID)
+	if err != nil {
+		return err
+	}
+
+	channelID := p.playingMessages[guildID]
+	messageID := p.playingMessages[channelID]
+	_, err = p.discord.Rest().UpdateMessage(channelID, messageID, discord.MessageUpdate{
+		Components: json.Ptr(Components(true)),
+	})
+
+	return err
 }
 
-// TODO:
-// Unsure if we can implement multi-track skips efficiently without changes to the underlying plugin
-func (p *Player) Skip(ctx context.Context, guildID snowflake.ID, num int) (*lavalink.Track, error) {
+func (p *Player) Skip(ctx context.Context, guildID snowflake.ID, count int) (*lavalink.Track, error) {
 	lp := p.lavalink.Player(guildID)
 	if lp == nil {
 		return nil, fmt.Errorf("no active nodes")
 	}
 
-	track, err := lavaqueue.QueueNextTrack(ctx, lp.Node(), guildID)
+	track, err := lavaqueue.QueueNextTrack(ctx, lp.Node(), guildID, count)
 	if err != nil {
 		// NOTE:
 		// Currently, lavalink.Error does not implement an unwrap interface,

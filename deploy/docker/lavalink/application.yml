@@ -37,7 +37,7 @@ lavalink:
   plugins:
   - dependency: "dev.lavalink.youtube:youtube-plugin:1.11.5"
     snapshot: false
-  - dependency: "com.github.topi314.lavaqueue:lavaqueue-plugin:5d6ca70"
+  - dependency: "com.github.topi314.lavaqueue:lavaqueue-plugin:7b32f42"
     repository: "https://maven.topi.wtf/snapshots"
     snapshot: false
   server:

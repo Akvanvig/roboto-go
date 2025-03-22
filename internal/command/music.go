@@ -62,7 +62,7 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 						Required:    true,
 					},
 					discord.ApplicationCommandOptionString{
-						Name:        "src",
+						Name:        "source",
 						Description: "The alternative search source to use, default is YouTube",
 						Choices: []discord.ApplicationCommandOptionChoiceString{
 							{
@@ -78,8 +78,25 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 				},
 			},
 			discord.ApplicationCommandOptionSubCommand{
-				Name:        "clear",
-				Description: "Clear the music queue",
+				Name:        "filter",
+				Description: "Toggle music filters",
+				Options: []discord.ApplicationCommandOption{
+					discord.ApplicationCommandOptionString{
+						Name:        "filter",
+						Description: "The filter to toggle",
+						Required:    true,
+						Choices: []discord.ApplicationCommandOptionChoiceString{
+							{
+								Name:  "Karaoke",
+								Value: string(player.FilterTypeKaraoke),
+							},
+							{
+								Name:  "Vibrato",
+								Value: string(player.FilterTypeVibrato),
+							},
+						},
+					},
+				},
 			},
 			discord.ApplicationCommandOptionSubCommand{
 				Name:        "volume",
@@ -93,6 +110,10 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 						MaxValue:    json.Ptr(100),
 					},
 				},
+			},
+			discord.ApplicationCommandOptionSubCommand{
+				Name:        "clear",
+				Description: "Clear the music queue",
 			},
 		},
 	}
@@ -139,8 +160,9 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 				}
 			})
 
-			r.SlashCommand("/clear", h.onClear)
+			r.SlashCommand("/filter", h.onFilter)
 			r.SlashCommand("/volume", h.onVolume)
+			r.SlashCommand("/clear", h.onClear)
 			r.Component("/skip", h.onSkipButton)
 			r.Component("/stop", h.onStopButton)
 			r.Component("/queue", h.onQueueButton)
@@ -158,7 +180,6 @@ type MusicHandler struct {
 
 func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handler.CommandEvent) error {
 	client := e.Client()
-
 	vsUser, ok := client.Caches().VoiceState(*e.GuildID(), e.User().ID)
 	if !ok {
 		return e.CreateMessage(discord.MessageCreate{
@@ -167,7 +188,7 @@ func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handl
 		})
 	}
 
-	src := data.String("src")
+	src := data.String("source")
 	q := data.String("query")
 
 	switch src {
@@ -242,17 +263,25 @@ func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handl
 	return nil
 }
 
-func (h *MusicHandler) onClear(data discord.SlashCommandInteractionData, e *handler.CommandEvent) error {
-	err := h.Player.Clear(e.Ctx, *e.GuildID())
+func (h *MusicHandler) onFilter(data discord.SlashCommandInteractionData, e *handler.CommandEvent) error {
+	filter := player.FilterType(data.String("filter"))
+	enabled, err := h.Player.Filter(e.Ctx, *e.GuildID(), filter)
 	if err != nil {
 		return e.CreateMessage(discord.MessageCreate{
-			Embeds: Embeds("Failed to clear queue", MessageColorError),
+			Embeds: Embeds("Failed to toggle filter", MessageColorError),
 			Flags:  discord.MessageFlagEphemeral,
 		})
 	}
 
+	var text string
+	if enabled {
+		text = "Enabled"
+	} else {
+		text = "Disabled"
+	}
+
 	return e.CreateMessage(discord.MessageCreate{
-		Embeds: Embeds(fmt.Sprintf("%s cleared the queue", e.User().Mention()), MessageColorDefault),
+		Embeds: Embeds(fmt.Sprintf("%s %s filter", text, filter), MessageColorDefault),
 	})
 }
 
@@ -288,6 +317,20 @@ func (h *MusicHandler) onSkipButton(e *handler.ComponentEvent) error {
 
 	e.Acknowledge()
 	return nil
+}
+
+func (h *MusicHandler) onClear(data discord.SlashCommandInteractionData, e *handler.CommandEvent) error {
+	err := h.Player.Clear(e.Ctx, *e.GuildID())
+	if err != nil {
+		return e.CreateMessage(discord.MessageCreate{
+			Embeds: Embeds("Failed to clear queue", MessageColorError),
+			Flags:  discord.MessageFlagEphemeral,
+		})
+	}
+
+	return e.CreateMessage(discord.MessageCreate{
+		Embeds: Embeds(fmt.Sprintf("%s cleared the queue", e.User().Mention()), MessageColorDefault),
+	})
 }
 
 func (h *MusicHandler) onStopButton(e *handler.ComponentEvent) error {
