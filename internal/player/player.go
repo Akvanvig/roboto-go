@@ -59,41 +59,37 @@ func (p *Player) Filter(ctx context.Context, guildID snowflake.ID, filter Filter
 	}
 
 	// NOTE:
-	// Filters doesn't unmarshal correctly...
-	// Need to check with the library creator if this is also bugged :(
-	//filters := lp.Filters()
+	// This disgolink function is bugged (https://github.com/disgoorg/disgolink/issues/59)
+	filters := lp.Filters()
 	enabled := false
-
 	switch filter {
-	/*
-		case FilterTypeKaraoke:
-			enabled = !(filters.Karaoke != nil)
-			if enabled {
-				filters.Karaoke = &lavalink.Karaoke{
-					Level:       1.0,
-					MonoLevel:   1.0,
-					FilterBand:  220.0,
-					FilterWidth: 100.0,
-				}
-			} else {
-				filters.Karaoke = nil
+	case FilterTypeKaraoke:
+		enabled = !(filters.Karaoke != nil)
+		if enabled {
+			filters.Karaoke = &lavalink.Karaoke{
+				Level:       1.0,
+				MonoLevel:   1.0,
+				FilterBand:  220.0,
+				FilterWidth: 100.0,
 			}
-		case FilterTypeVibrato:
-			enabled = !(filters.Vibrato != nil)
-			if enabled {
-				filters.Vibrato = &lavalink.Vibrato{
-					Frequency: 2.0,
-					Depth:     0.5,
-				}
-			} else {
-				filters.Vibrato = nil
+		} else {
+			filters.Karaoke = nil
+		}
+	case FilterTypeVibrato:
+		enabled = !(filters.Vibrato != nil)
+		if enabled {
+			filters.Vibrato = &lavalink.Vibrato{
+				Frequency: 2.0,
+				Depth:     0.5,
 			}
-	*/
+		} else {
+			filters.Vibrato = nil
+		}
 	default:
 		return enabled, fmt.Errorf("currently unsupported filter type: %s", filter)
 	}
 
-	//return enabled, lp.Update(ctx, lavalink.WithFilters(filters))
+	return enabled, lp.Update(ctx, lavalink.WithFilters(filters))
 }
 
 func (p *Player) Volume(ctx context.Context, guildID snowflake.ID, volume int) error {

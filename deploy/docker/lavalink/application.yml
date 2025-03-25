@@ -13,8 +13,8 @@ plugins:
     #  refreshToken: ""
     clients:
       - MUSIC
-    #  - TV
-    #  - TVHTML5EMBEDDED
+      - TV
+      - TVHTML5EMBEDDED
       - WEB
       - WEBEMBEDDED 
       - MWEB

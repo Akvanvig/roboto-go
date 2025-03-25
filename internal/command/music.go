@@ -77,27 +77,28 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 					},
 				},
 			},
-			discord.ApplicationCommandOptionSubCommand{
-				Name:        "filter",
-				Description: "Toggle music filters",
-				Options: []discord.ApplicationCommandOption{
-					discord.ApplicationCommandOptionString{
-						Name:        "filter",
-						Description: "The filter to toggle",
-						Required:    true,
-						Choices: []discord.ApplicationCommandOptionChoiceString{
-							{
-								Name:  "Karaoke",
-								Value: string(player.FilterTypeKaraoke),
-							},
-							{
-								Name:  "Vibrato",
-								Value: string(player.FilterTypeVibrato),
+			/*
+				discord.ApplicationCommandOptionSubCommand{
+					Name:        "filter",
+					Description: "Toggle music filters",
+					Options: []discord.ApplicationCommandOption{
+						discord.ApplicationCommandOptionString{
+							Name:        "filter",
+							Description: "The filter to toggle",
+							Required:    true,
+							Choices: []discord.ApplicationCommandOptionChoiceString{
+								{
+									Name:  "Karaoke",
+									Value: string(player.FilterTypeKaraoke),
+								},
+								{
+									Name:  "Vibrato",
+									Value: string(player.FilterTypeVibrato),
+								},
 							},
 						},
 					},
-				},
-			},
+				},*/
 			discord.ApplicationCommandOptionSubCommand{
 				Name:        "volume",
 				Description: "Adjust the music volume",
@@ -160,7 +161,7 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 				}
 			})
 
-			r.SlashCommand("/filter", h.onFilter)
+			//r.SlashCommand("/filter", h.onFilter)
 			r.SlashCommand("/volume", h.onVolume)
 			r.SlashCommand("/clear", h.onClear)
 			r.Component("/skip", h.onSkipButton)
