@@ -1,0 +1,31 @@
+services:
+  bot:
+    image: roboto:latest
+    container_name: roboto
+    restart: unless-stopped
+    environment:
+      - BOT_CONFIG_PATH=/opt/roboto/config.yaml
+      - BOT_CONFIG_SECRETS_PATH=/opt/roboto/config_secrets.yaml
+    volumes:
+      - ./roboto/config.yaml:/opt/roboto/config.yaml
+      - ./roboto/config_secrets.yaml:/opt/roboto/config_secrets.yaml
+    networks:
+      - streaming
+  lavalink:
+    image: ghcr.io/lavalink-devs/lavalink:4
+    container_name: lavalink
+    restart: unless-stopped
+    environment:
+      - _JAVA_OPTIONS=-Xmx6G
+      - SERVER_PORT=2333
+      - LAVALINK_SERVER_PASSWORD=supersecret
+    volumes:
+      - ./lavalink/application.yml:/opt/Lavalink/application.yml
+      - ./plugins/:/opt/Lavalink/plugins/
+    networks:
+      - streaming
+    expose:
+      - 2333
+networks:
+  streaming:
+    name: lavalink_stream

@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "roboto-go.name" . }}-lavalink
+  labels:
+    {{- include "roboto-go.labelsLavalink" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "roboto-go.selectorLabelsLavalink" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "roboto-go.labelsLavalink" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "roboto-go.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+          - containerPort: {{ .Values.lavalink.service.port }}
+            name: http
+          image: "{{ .Values.lavalink.image.repository }}:{{ .Values.lavalink.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+          - name: _JAVA_OPTIONS
+            value: {{ .Values.roboto.lavalink.javaOptions | quote }}
+          - name: SERVER_PORT
+            value: {{ .Values.lavalink.service.port | quote }}
+          - name: LAVALINK_SERVER_PASSWORD
+            value: {{ include "roboto-go.lavalinkPassword" . | quote }}
+          {{- with .Values.lavalink.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.lavalink.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.lavalink.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: lavalink-storage
+              mountPath: /opt/Lavalink/plugins
+      volumes:
+      {{- if ( not .Values.lavalink.persistance ) }}
+          - name: lavalink-storage
+            emptyDir:
+              sizeLimit: 10Gi
+      {{- end }}
+      {{- with .Values.lavalink.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.lavalink.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.lavalink.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- if .Values.lavalink.persistance }}
+  volumeClaimTemplates:
+  - metadata:
+      name: lavalink-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: {{- .Values.lavalink.storageClass }}
+      resources:
+        requests:
+          storage: {{- .Values.lavalink.storage }}
+  {{- end }}

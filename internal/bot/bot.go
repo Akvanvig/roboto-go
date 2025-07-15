@@ -1,89 +1,97 @@
 package bot
 
 import (
-	"fmt"
+	"context"
+	"sync"
+	"time"
 
-	"github.com/Akvanvig/roboto-go/internal/bot/api"
-	_ "github.com/Akvanvig/roboto-go/internal/bot/modules"
-	"github.com/bwmarrin/discordgo"
-	"github.com/rs/zerolog/log"
+	"github.com/Akvanvig/roboto-go/internal/config"
+	"github.com/Akvanvig/roboto-go/internal/player"
+	"github.com/disgoorg/disgo"
+	"github.com/disgoorg/disgo/bot"
+	"github.com/disgoorg/disgo/cache"
+	"github.com/disgoorg/disgo/discord"
+	"github.com/disgoorg/disgo/gateway"
+	"github.com/disgoorg/disgo/handler"
 )
 
-var session *discordgo.Session
-
-func onReady(s *discordgo.Session, r *discordgo.Ready) {
-	log.Info().Msg(fmt.Sprintf("Connected as: %s#%s", s.State.User.Username, s.State.User.Discriminator))
+type RobotoBot struct {
+	// Config
+	Config *config.RobotoConfig
+	// Clients
+	Discord bot.Client
+	Player  *player.Player
 }
 
-func onMsg(s *discordgo.Session, m *discordgo.MessageCreate) {
-	// Nothing yet
-}
+func (b *RobotoBot) Start(cmds []discord.ApplicationCommandCreate, r *handler.Mux) error {
+	var wg sync.WaitGroup
 
-// Note(Fredrico):
-// Currently discordgo has not added support for auditlog entry creations yet...
-// See https://github.com/bwmarrin/discordgo/pull/1314
-/*
-func onAuditlog(s *discordgo.Session, l *discordgo.AuditLogEntryCreate) {
-	switch *l.ActionType {
-	case discordgo.AuditLogActionMemberKick:
-		fallthrough
-	case discordgo.AuditLogActionMemberDisconnect:
-		if l.TargetID == s.State.User.ID {
-			log.Info().Msg("Detected event!")
-		}
-	}
-}
-*/
+	// TODO:
+	// Proper error handling for sync commands
+	// and adding nodes
+	if b.Player != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
 
-/*
-func onVoiceStateUpdate(s *discordgo.Session, st *discordgo.VoiceStateUpdate) {
-	// We only care about ourselves
-	if st.UserID != s.State.User.ID {
-		return
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			b.Player.AddNodes(ctx, b.Config.Lavalink.Nodes...)
+		}()
 	}
 
-	st.VoiceState.
-		log.Info().Msg(fmt.Sprintf("Test %+v", st))
-}
-*/
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		b.Discord.AddEventListeners(r)
+		handler.SyncCommands(b.Discord, cmds, nil)
+	}()
 
-func Start(token *string) {
-	var err error
+	wg.Wait()
 
-	// Note(Fredrico):
-	// It's worth mentioning that discordgo does not check if the parameters are valid yet
-	session, err = discordgo.New("Bot " + *token)
+	err := b.Discord.OpenGateway(context.Background())
 	if err != nil {
-		log.Fatal().Str("message", "Invalid bot parameters").Err(err).Send()
+		return err
 	}
 
-	session.AddHandler(onReady)
-	session.AddHandler(onMsg)
-	session.AddHandler(api.ProcessCommands)
-	//session.AddHandler(onAuditlog)
-
-	err = session.Open()
-	if err != nil {
-		log.Fatal().Err(err).Msg("Unable to open a session")
-	}
-
-	err = api.SetupCommands(session)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed setup step")
-	}
-
-	log.Info().Msg("Bot is ready")
+	return nil
 }
 
-func Stop() {
-	log.Info().Msg("Stopping the bot")
-
-	if session != nil {
-		err := session.Close()
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to close the session properly")
-		}
-
-		session = nil
+func (b *RobotoBot) Stop() {
+	b.Discord.Close(context.Background())
+	if b.Player != nil {
+		b.Player.Close()
 	}
+}
+
+func New(cfg *config.RobotoConfig) (*RobotoBot, error) {
+	roboto := &RobotoBot{
+		Config: cfg,
+	}
+
+	discord, err := disgo.New(cfg.Discord.Token,
+		bot.WithGatewayConfigOpts(
+			gateway.WithIntents(
+				gateway.IntentGuilds,
+				gateway.IntentGuildVoiceStates,
+			),
+		),
+		bot.WithCacheConfigOpts(
+			cache.WithCaches(
+				cache.FlagGuilds,
+				cache.FlagVoiceStates,
+			),
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	roboto.Discord = discord
+	if cfg.Lavalink != nil {
+		roboto.Player = player.New(discord)
+	}
+
+	return roboto, nil
 }

@@ -1,10 +1,11 @@
-# Roboto Go
+# Roboto-Go
 
-## Requirements
-Roboto-Go needs the environment variable `CGO_ENABLED` set to `1` to build
+## TODO
 
-## Development
-Run Roboto-Go with the dev tag `go run -tags dev`
+- Fix channel weirdness with permissions
+- Fix channel id message (Unnown Message)
+- Running a clear does not update the message buttons
+- Improve search
+    - Fix livestreams
 
-### Profiling
-PProf is used for profiling. It's suggested to install [https://www.graphviz.org/](https://www.graphviz.org/) to enable easy visualization.
+- Fix helm chart

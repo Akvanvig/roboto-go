@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: roboto-cm
+data:
+  roboto-config.yaml: |-
+    discord:
+      token: {{ .Values.roboto.discord.token | quote}}
+    lavalink:
+      nodes:
+        - name: {{ include "roboto-go.name" . }}-lavalink
+          address: {{ include "roboto-go.name" . }}-lavalink.svc
+          password: {{ printf "%s:%v" ( include "roboto-go.lavalinkPassword" . ) (int $.Values.lavalink.service.port) }}
+        # {{- range $i, $e := until ( int .Values.roboto.lavalink.replicas ) }}
+        # - name: {{ printf "%s-lavalink-%v" ( include "roboto-go.name" $ ) $i }}
+        #   address: {{ printf "%s-lavalink-%v:%v" ( include "roboto-go.name" $ ) $i (int $.Values.lavalink.service.port) }}
+        #   password: {{ include "roboto-go.lavalinkPassword" . }}
+        # {{- end }}
