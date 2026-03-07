@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lavalink-cm
+data:
+  application.yml: |-
+    {{- toYaml .Values.lavalink.config | nindent 4}}

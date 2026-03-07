@@ -63,13 +63,22 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           volumeMounts:
+            - name: lavalink-config
+              mountPath: /opt/Lavalink/application.yml
+              subPath: application.yml
             - name: lavalink-storage
               mountPath: /opt/Lavalink/plugins
       volumes:
+        - name: lavalink-config
+          configMap:
+            name: lavalink-cm
+            items:
+              - key: application.yml
+                path: application.yml
       {{- if ( not .Values.lavalink.persistance ) }}
-          - name: lavalink-storage
-            emptyDir:
-              sizeLimit: 10Gi
+        - name: lavalink-storage
+          emptyDir:
+            sizeLimit: 10Gi
       {{- end }}
       {{- with .Values.lavalink.nodeSelector }}
       nodeSelector:
