@@ -19,7 +19,7 @@ type RobotoBot struct {
 	// Config
 	Config *config.RobotoConfig
 	// Clients
-	Discord bot.Client
+	Discord *bot.Client
 	Player  *player.Player
 }
 
@@ -90,7 +90,7 @@ func New(cfg *config.RobotoConfig) (*RobotoBot, error) {
 
 	roboto.Discord = discord
 	if cfg.Lavalink != nil {
-		roboto.Player = player.New(discord)
+		roboto.Player = player.New(*discord)
 	}
 
 	return roboto, nil

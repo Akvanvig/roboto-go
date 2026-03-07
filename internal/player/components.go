@@ -120,12 +120,29 @@ func Embeds(title string, simple bool, tracks ...lavalink.Track) []discord.Embed
 	return []discord.Embed{embed}
 }
 
-func Components(queueEmpty bool) []discord.ContainerComponent {
-	components := []discord.ContainerComponent{discord.ActionRowComponent{
-		discord.NewPrimaryButton("Skip", "/music/skip").WithEmoji(discord.ComponentEmoji{Name: "👉"}).WithDisabled(queueEmpty),
-		discord.NewPrimaryButton("Queue", "/music/queue").WithEmoji(discord.ComponentEmoji{Name: "👏"}).WithStyle(discord.ButtonStyleSecondary).WithDisabled(queueEmpty),
-		discord.NewPrimaryButton("Stop", "/music/stop").WithEmoji(discord.ComponentEmoji{Name: "👋"}).WithStyle(discord.ButtonStyleDanger),
-	}}
-
+func Components(queueEmpty bool) []discord.LayoutComponent {
+	// disabled temporarily to get things running
+	components := []discord.LayoutComponent{}
 	return components
 }
+
+// func Components(queueEmpty bool) []discord.ContainerComponent {
+// 	// disabled temporarily to get things running
+// 	components := []discord.ContainerComponent{discord.ActionRowComponent{
+// 		discord.NewPrimaryButton("Skip", "/music/skip").WithEmoji(discord.ComponentEmoji{Name: "👉"}).WithDisabled(queueEmpty),
+// 		discord.NewPrimaryButton("Queue", "/music/queue").WithEmoji(discord.ComponentEmoji{Name: "👏"}).WithStyle(discord.ButtonStyleSecondary).WithDisabled(queueEmpty),
+// 		discord.NewPrimaryButton("Stop", "/music/stop").WithEmoji(discord.ComponentEmoji{Name: "👋"}).WithStyle(discord.ButtonStyleDanger),
+// 	}}
+// 	return components
+// }
+
+// func Components(queueEmpty bool) []discord.LayoutComponent {
+// 	// disabled temporarily to get things running
+// 	components := []discord.ContainerComponent{discord.ActionRowComponent{
+// 		discord.NewPrimaryButton("Skip", "/music/skip").WithEmoji(discord.ComponentEmoji{Name: "👉"}).WithDisabled(queueEmpty),
+// 		discord.NewPrimaryButton("Queue", "/music/queue").WithEmoji(discord.ComponentEmoji{Name: "👏"}).WithStyle(discord.ButtonStyleSecondary).WithDisabled(queueEmpty),
+// 		discord.NewPrimaryButton("Stop", "/music/stop").WithEmoji(discord.ComponentEmoji{Name: "👋"}).WithStyle(discord.ButtonStyleDanger),
+// 	}}
+
+// 	return components
+// }

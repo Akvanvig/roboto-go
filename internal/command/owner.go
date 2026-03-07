@@ -22,7 +22,7 @@ func ownerCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 	r.Route("/owner", func(r handler.Router) {
 		r.Use(func(next handler.Handler) handler.Handler {
 			return func(e *handler.InteractionEvent) error {
-				app, err := e.Client().Rest().GetBotApplicationInfo()
+				app, err := e.Client().Rest.GetBotApplicationInfo()
 				if err != nil {
 					return e.Respond(discord.InteractionResponseTypeCreateMessage, discord.MessageUpdate{
 						Embeds: json.Ptr(Embeds("Failed to retrieve bot app info", MessageColorError)),
