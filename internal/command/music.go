@@ -137,7 +137,7 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 						})
 					}
 
-					caches := client.Caches()
+					caches := client.Caches
 					if *channelID != e.Channel().ID() {
 						channel, _ := caches.Channel(*channelID)
 						return e.Respond(discord.InteractionResponseTypeCreateMessage, discord.MessageUpdate{
@@ -181,7 +181,7 @@ type MusicHandler struct {
 
 func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handler.CommandEvent) error {
 	client := e.Client()
-	vsUser, ok := client.Caches().VoiceState(*e.GuildID(), e.User().ID)
+	vsUser, ok := client.Caches.VoiceState(*e.GuildID(), e.User().ID)
 	if !ok {
 		return e.CreateMessage(discord.MessageCreate{
 			Embeds: Embeds("Must be in a voice channel to queue songs", MessageColorError),
@@ -218,7 +218,7 @@ func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handl
 				return
 			}
 
-			vsBot, ok := client.Caches().VoiceState(*e.GuildID(), e.ApplicationID())
+			vsBot, ok := client.Caches.VoiceState(*e.GuildID(), e.ApplicationID())
 			if ok {
 				if *vsUser.ChannelID != *vsBot.ChannelID {
 					e.UpdateInteractionResponse(discord.MessageUpdate{

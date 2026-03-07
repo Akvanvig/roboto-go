@@ -19,7 +19,7 @@ func (p *Player) onVoiceServerUpdate(e *events.VoiceServerUpdate) {
 }
 
 func (p *Player) onGuildVoiceStateUpdate(e *events.GuildVoiceStateUpdate) {
-	if e.VoiceState.UserID == e.Client().ApplicationID() {
+	if e.VoiceState.UserID == e.Client().ApplicationID {
 		p.lavalink.OnVoiceStateUpdate(context.Background(), e.VoiceState.GuildID, e.VoiceState.ChannelID, e.VoiceState.SessionID)
 	}
 }
@@ -34,7 +34,7 @@ func (p *Player) onTrackStart(lp disgolink.Player, e lavalink.TrackStartEvent) {
 	defer p.m.Unlock()
 
 	channelID := p.playingChannels[guildID]
-	msg, err := p.discord.Rest().CreateMessage(channelID, discord.MessageCreate{
+	msg, err := p.discord.Rest.CreateMessage(channelID, discord.MessageCreate{
 		Embeds:     Embeds("Now playing", false, e.Track),
 		Components: Components(len(queue) < 1),
 	})
@@ -57,7 +57,7 @@ func (p *Player) onTrackEnd(lp disgolink.Player, e lavalink.TrackEndEvent) {
 		return
 	}
 
-	err := p.discord.Rest().DeleteMessage(channelID, messageID)
+	err := p.discord.Rest.DeleteMessage(channelID, messageID)
 	if err != nil {
 		log.Warn().Err(err).Msgf("Failed to delete the message with ID '%s' in channel ID '%s'", messageID, channelID)
 	}
@@ -90,7 +90,7 @@ func (p *Player) onWebSocketClosed(lp disgolink.Player, e lavalink.WebSocketClos
 	channelID := p.playingChannels[guildID]
 	messageID := p.playingMessages[channelID]
 
-	p.discord.Rest().DeleteMessage(channelID, messageID)
+	p.discord.Rest.DeleteMessage(channelID, messageID)
 
 	delete(p.playingChannels, guildID)
 	delete(p.playingMessages, channelID)

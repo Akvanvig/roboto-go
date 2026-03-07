@@ -176,7 +176,7 @@ func (p *Player) Add(ctx context.Context, guildID snowflake.ID, channelID snowfl
 		p.playingChannels[guildID] = channelID
 	} else {
 		messageID := p.playingMessages[channelID]
-		_, err = p.discord.Rest().UpdateMessage(channelID, messageID, discord.MessageUpdate{
+		_, err = p.discord.Rest.UpdateMessage(channelID, messageID, discord.MessageUpdate{
 			Components: json.Ptr(Components(false)),
 		})
 		return err
@@ -218,7 +218,7 @@ func (p *Player) Clear(ctx context.Context, guildID snowflake.ID) error {
 
 	channelID := p.playingMessages[guildID]
 	messageID := p.playingMessages[channelID]
-	_, err = p.discord.Rest().UpdateMessage(channelID, messageID, discord.MessageUpdate{
+	_, err = p.discord.Rest.UpdateMessage(channelID, messageID, discord.MessageUpdate{
 		Components: json.Ptr(Components(true)),
 	})
 
@@ -290,7 +290,7 @@ func (p *Player) Close() {
 	// NOTE:
 	// We gracefully clean up sent messages to avoid user confusion.
 	for channelID, messageID := range p.playingMessages {
-		p.discord.Rest().DeleteMessage(channelID, messageID)
+		p.discord.Rest.DeleteMessage(channelID, messageID)
 		delete(p.playingMessages, channelID)
 	}
 
@@ -300,7 +300,7 @@ func (p *Player) Close() {
 }
 
 func New(discord bot.Client) *Player {
-	lavalink := disgolink.New(discord.ApplicationID(),
+	lavalink := disgolink.New(discord.ApplicationID,
 		disgolink.WithPlugins(
 			lavaqueue.New(),
 		),
