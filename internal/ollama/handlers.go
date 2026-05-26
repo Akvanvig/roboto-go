@@ -1,4 +1,4 @@
-package handlers
+package ollama
 
 import (
 	"github.com/disgoorg/disgo/bot"
