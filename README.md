@@ -8,4 +8,23 @@
 - Improve search
     - Fix livestreams
 
-- Fix helm chart
+- fix configfile for chatter
+
+## running test instance of ollama locally
+
+set up ollama
+
+  curl ... 
+  ollama pull <model>
+  ollama serve ... 
+  
+
+## testing llama
+
+generate
+
+  curl -H 'Content-type: application/json' http://192.168.10.23:32300/api/generate -d @gen.test | jq
+
+chat
+
+  curl -H "Content-type: application/json" http://192.168.10.23:32300/api/chat -d @llama.test | jq

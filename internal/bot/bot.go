@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Akvanvig/roboto-go/internal/config"
+	"github.com/Akvanvig/roboto-go/internal/events"
 	"github.com/Akvanvig/roboto-go/internal/player"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
@@ -48,6 +49,13 @@ func (b *RobotoBot) Start(cmds []discord.ApplicationCommandCreate, r *handler.Mu
 		handler.SyncCommands(b.Discord, cmds, nil)
 	}()
 
+	// add events
+	// fix at some point
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		b.Discord.EventManager.AddEventListeners(events.EventListeners...)
+	}()
 	wg.Wait()
 
 	err := b.Discord.OpenGateway(context.Background())
@@ -75,6 +83,9 @@ func New(cfg *config.RobotoConfig) (*RobotoBot, error) {
 			gateway.WithIntents(
 				gateway.IntentGuilds,
 				gateway.IntentGuildVoiceStates,
+				gateway.IntentGuildMessages,
+				gateway.IntentMessageContent,
+				gateway.IntentsDirectMessage,
 			),
 		),
 		bot.WithCacheConfigOpts(
