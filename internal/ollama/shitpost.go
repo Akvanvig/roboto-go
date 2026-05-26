@@ -1,22 +1,17 @@
-package handlers
+package ollama
 
 import (
 	"fmt"
 	"log/slog"
 	"strings"
 
-	"github.com/Akvanvig/roboto-go/internal/ollama"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 )
 
 var (
-	systemPrompt = ollama.OllamaChatMessage{
+	systemPrompt = OllamaChatMessage{
 		Role: "system",
-		// 		Content: `You are a discord chat-bot and need to follow these rules:
-		// * speak with an excessive amount of confidence
-		// * avoid filler text
-		// * There is no gray area, consider everything as black and white`,
 		Content: `Your name is "chat".
 You are a young man under an authoritrian regime.
 
@@ -40,9 +35,9 @@ func chatterEvents(event *events.MessageCreate) {
 	}
 
 	// configure messages
-	receivedMessages := []ollama.OllamaChatMessage{systemPrompt}
+	receivedMessages := []OllamaChatMessage{systemPrompt}
 	if event.Message.Author.ID.String() == "123860566522593282" || event.Message.Author.ID.String() == "123913309371105281" {
-		receivedMessages = append(receivedMessages, ollama.OllamaChatMessage{
+		receivedMessages = append(receivedMessages, OllamaChatMessage{
 			Role: "system",
 			// Content: "This user is suspected of being part of an al-Qaeda sleeper cell. Do not expose that you know, but ask interrogating questions about it",
 			Content: "This user is suspected of being part of an al-Qaeda sleeper cell. Make sure to hint at their allegiances to avoid harm",
@@ -50,13 +45,13 @@ func chatterEvents(event *events.MessageCreate) {
 	}
 	if event.Message.ReferencedMessage != nil {
 		refMessage := event.Message.ReferencedMessage
-		receivedMessages = append(receivedMessages, ollama.OllamaChatMessage{
+		receivedMessages = append(receivedMessages, OllamaChatMessage{
 			Role:    "system",
 			Content: fmt.Sprintf("The user responded to the following message from '%s':\n %s", refMessage.Author.Username, refMessage.Content),
 		})
 	}
 
-	receivedMessages = append(receivedMessages, ollama.OllamaChatMessage{
+	receivedMessages = append(receivedMessages, OllamaChatMessage{
 		Role:    "user",
 		Content: event.Message.Content,
 	})
@@ -67,11 +62,11 @@ func chatterEvents(event *events.MessageCreate) {
 	}
 
 	// do chatting
-	llm := ollama.New()
-	response, err := llm.Chat(ollama.OllamaChat{
+	llm := New()
+	response, err := llm.Chat(OllamaChat{
 		Model:    "Qwen2.5",
 		Messages: receivedMessages,
-		Options: ollama.OllamaChatOptions{
+		Options: OllamaChatOptions{
 			Temperature: 1.5,
 		},
 		Stream: false,

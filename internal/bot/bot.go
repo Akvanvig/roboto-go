@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/Akvanvig/roboto-go/internal/config"
-	"github.com/Akvanvig/roboto-go/internal/handlers"
+	"github.com/Akvanvig/roboto-go/internal/ollama"
 	"github.com/Akvanvig/roboto-go/internal/player"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
@@ -54,7 +54,7 @@ func (b *RobotoBot) Start(cmds []discord.ApplicationCommandCreate, r *handler.Mu
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		b.Discord.EventManager.AddEventListeners(handlers.EventListeners...)
+		b.Discord.EventManager.AddEventListeners(ollama.EventListeners...)
 	}()
 	wg.Wait()
 
