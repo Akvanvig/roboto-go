@@ -1,4 +1,4 @@
-package events
+package handlers
 
 import (
 	"github.com/disgoorg/disgo/bot"

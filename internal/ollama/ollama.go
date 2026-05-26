@@ -1,4 +1,4 @@
-package chatter
+package ollama
 
 import (
 	"bytes"

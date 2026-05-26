@@ -1,4 +1,4 @@
-package chatter
+package ollama
 
 // structs
 // message model for the chat endpoint of ollama
