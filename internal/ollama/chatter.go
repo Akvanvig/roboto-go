@@ -19,7 +19,7 @@ type OllamaChat struct {
 type OllamaChatMessage struct {
 	Role      string                `json:"role"`             // required "system","user","assistant" or "tool"
 	Content   string                `json:"content"`          // required
-	Images    []string              `json:"images,omitempty"` //base64-encoded image content
+	Images    []string              `json:"images,omitempty"` // base64-encoded image content
 	ToolCalls []OllamaChatToolCalls `json:"tool_calls,omitempty"`
 }
 

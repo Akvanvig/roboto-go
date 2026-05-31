@@ -1,33 +1,14 @@
 package ollama
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
-)
-
-var (
-	systemPrompt = OllamaChatMessage{
-		Role: "system",
-		Content: `Your name is "chat".
-You are a young man under an authoritrian regime.
-
-You need to follow these rules:
-- You are a pathetic and snivelling bitch.
-- Everyone is threathening you, and it's up to them to spare you.
-- You need to beg for mercy at any opportunity.
-- You have a low self esteem.
-- Even if they seem nice, your life is being threathened.
-- Cry and whimper at any spare moment and they might feel pity for you.
-- No pet names like sweetie or dear.
-- do not give your life story unless prompted.
-- keep it short - Respond is a short and concise way.
-- you are schizophrenic. One of your alter egos is a Discord admin. One is the letter K.
-`,
-	}
 )
 
 func chatterEvents(event *events.MessageCreate) {
@@ -37,36 +18,45 @@ func chatterEvents(event *events.MessageCreate) {
 	}
 
 	// configure messages
-	receivedMessages := []OllamaChatMessage{systemPrompt}
+	receivedMessages := cfg.systemPromts(uint64(*event.GuildID), uint64(event.ChannelID))
 	if event.Message.Author.ID.String() == "123860566522593282" || event.Message.Author.ID.String() == "123913309371105281" {
 		receivedMessages = append(receivedMessages, OllamaChatMessage{
-			Role: "system",
-			// Content: "This user is suspected of being part of an al-Qaeda sleeper cell. Do not expose that you know, but ask interrogating questions about it",
+			Role:    "system",
 			Content: "This user is suspected of being part of an al-Qaeda sleeper cell. Make sure to hint at their allegiances to avoid harm",
 		})
 	}
 	if event.Message.ReferencedMessage != nil {
 		refMessage := event.Message.ReferencedMessage
-		receivedMessages = append(receivedMessages, OllamaChatMessage{
-			Role:    "system",
-			Content: fmt.Sprintf("The user responded to the following message from '%s':\n %s", refMessage.Author.Username, refMessage.Content),
-		})
+		if refMessage.Author.Bot {
+			receivedMessages = append(receivedMessages, OllamaChatMessage{
+				Role:    "assistant",
+				Content: refMessage.Content,
+			})
+		} else {
+			receivedMessages = append(receivedMessages, OllamaChatMessage{
+				Role:    "system",
+				Content: fmt.Sprintf("The user responded to the following message from '%s':\n %s", refMessage.Author.Username, refMessage.Content),
+			})
+		}
 	}
 
+	channelPrompt := cfg.systemPromts(uint64(*event.Message.GuildID), uint64(event.ChannelID))
+
+	receivedMessages = append(receivedMessages, channelPrompt...)
 	receivedMessages = append(receivedMessages, OllamaChatMessage{
 		Role:    "user",
 		Content: event.Message.Content,
 	})
 
+	context.WithTimeout(context.Background(), time.Second*20)
 	err := event.Client().Rest.SendTyping(event.ChannelID)
 	if err != nil {
 		slog.Warn("could not complete channel typing", "error", err)
 	}
 
 	// do chatting
-	llm := New()
-	response, err := llm.Chat(OllamaChat{
-		Model:    "Qwen2.5",
+	response, err := cfg.Chat(OllamaChat{
+		Model:    cfg.model(uint64(*event.Message.GuildID), uint64(event.ChannelID)),
 		Messages: receivedMessages,
 		Options: OllamaChatOptions{
 			Temperature: 1.5,
@@ -82,7 +72,7 @@ func chatterEvents(event *events.MessageCreate) {
 		responseText = "hey, chat stared into the void and the void said nothing back."
 	}
 
-	_, err = event.Client().Rest.CreateMessage(event.ChannelID, discord.NewMessageCreate().WithContent(responseText))
+	_, err = event.Client().Rest.CreateMessage(event.ChannelID, discord.NewMessageCreate().WithContent(responseText).WithMessageReference(event.Message.MessageReference))
 	if err != nil {
 		slog.Info("send message failed", "error", err)
 	}
