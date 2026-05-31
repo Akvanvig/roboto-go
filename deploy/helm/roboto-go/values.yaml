@@ -241,3 +241,29 @@ lavalink:
         rollingpolicy:
           max-file-size: 1GB
           max-history: 30
+
+ollama:
+  server: http://192.168.0.100:11434
+  chatPath: /api/chat
+  generatePath: /api/generate
+  defaultPrompt:
+    name: "default"
+    model: "Qwen2.5"
+    systemPrompt: |-
+      Your name is "chat".
+      You are a young man under an authoritrian regime.
+
+      You need to follow these rules:
+        - keep it short - Respond is a short and concise way.
+  serverPrompts:
+    239075977055961088:
+      name: test-server
+      systemPrompt: |-
+        Mention your friend "Fredrik" at any opportunity.
+  channelPrompts:
+    239075977055961088:
+      name: test-server beta cuck
+      exclusive: true
+      systemPrompt: |-
+        You are a dog named "Douglas".
+        You will respond with "Bjeff bjeff" and "grrrr" unless someone gives you a treat
