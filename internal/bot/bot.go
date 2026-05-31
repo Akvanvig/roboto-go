@@ -54,7 +54,8 @@ func (b *RobotoBot) Start(cmds []discord.ApplicationCommandCreate, r *handler.Mu
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		b.Discord.EventManager.AddEventListeners(ollama.EventListeners...)
+		eventListeners := ollama.New(b.Config.Ollama)
+		b.Discord.EventManager.AddEventListeners(eventListeners...)
 	}()
 	wg.Wait()
 
@@ -85,7 +86,7 @@ func New(cfg *config.RobotoConfig) (*RobotoBot, error) {
 				gateway.IntentGuildVoiceStates,
 				gateway.IntentGuildMessages,
 				gateway.IntentMessageContent,
-				gateway.IntentsDirectMessage,
+				// gateway.IntentsDirectMessage,
 			),
 		),
 		bot.WithCacheConfigOpts(

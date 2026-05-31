@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/Akvanvig/roboto-go/internal/ollama"
 	"github.com/disgoorg/disgolink/v3/disgolink"
 	"gopkg.in/yaml.v3"
 )
@@ -21,6 +22,7 @@ type LavalinkConfig struct {
 type RobotoConfig struct {
 	Discord  DiscordConfig   `yaml:"discord"`
 	Lavalink *LavalinkConfig `yaml:"lavalink"` // Optional
+	Ollama   ollama.Ollama   `yaml:"ollama"`
 }
 
 func resolve(path string) (string, error) {
