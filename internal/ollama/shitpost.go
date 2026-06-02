@@ -25,19 +25,31 @@ func chatterEvents(event *events.MessageCreate) {
 			Content: "This user is suspected of being part of an al-Qaeda sleeper cell. Make sure to hint at their allegiances to avoid harm",
 		})
 	}
-	if event.Message.ReferencedMessage != nil {
-		refMessage := event.Message.ReferencedMessage
-		if refMessage.Author.Bot {
-			receivedMessages = append(receivedMessages, OllamaChatMessage{
-				Role:    "assistant",
-				Content: refMessage.Content,
-			})
-		} else {
-			receivedMessages = append(receivedMessages, OllamaChatMessage{
-				Role:    "system",
-				Content: fmt.Sprintf("The user responded to the following message from '%s':\n %s", refMessage.Author.Username, refMessage.Content),
-			})
+
+	// go through referenced messages to get more context
+	// Might want to set a limit on loop at some point
+	nextMessage := event.Message.ReferencedMessage
+	for {
+		// if no message is referenced, drop out of loop
+		if nextMessage == nil {
+			break
 		}
+
+		// tag roboto messages as assistant
+		if nextMessage.Author.Bot {
+			receivedMessages = append([]OllamaChatMessage{{
+				Role:    "assistant",
+				Content: nextMessage.Content,
+			}}, receivedMessages...)
+		} else { // otherwise tag with user and include displayname
+			receivedMessages = append([]OllamaChatMessage{{
+				Role:    "user",
+				Content: fmt.Sprintf("'%s' says:\n%s", nextMessage.Author.EffectiveName(), nextMessage.Content),
+			}}, receivedMessages...)
+		}
+
+		// set referenced message to next reference
+		nextMessage = nextMessage.ReferencedMessage
 	}
 
 	channelPrompt := cfg.systemPromts(uint64(*event.Message.GuildID), uint64(event.ChannelID))
@@ -72,7 +84,7 @@ func chatterEvents(event *events.MessageCreate) {
 		responseText = "hey, chat stared into the void and the void said nothing back."
 	}
 
-	_, err = event.Client().Rest.CreateMessage(event.ChannelID, discord.NewMessageCreate().WithContent(responseText).WithMessageReference(event.Message.MessageReference))
+	_, err = event.Client().Rest.CreateMessage(event.ChannelID, discord.NewMessageCreate().WithContent(responseText).WithMessageReferenceByID(*&event.Message.ID))
 	if err != nil {
 		slog.Info("send message failed", "error", err)
 	}
