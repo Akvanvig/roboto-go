@@ -2,13 +2,13 @@ package player
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/Akvanvig/roboto-go/internal/config"
 	"github.com/disgoorg/json"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/discord"
@@ -25,6 +25,7 @@ type TrackUserData struct {
 }
 
 type Player struct {
+	cfg             *config.LavalinkConfig
 	discord         bot.Client
 	lavalink        disgolink.Client
 	playingChannels map[snowflake.ID]snowflake.ID
@@ -45,6 +46,8 @@ func (p *Player) ChannelID(guildID snowflake.ID) *snowflake.ID {
 	return &channelID
 }
 
+// See https://github.com/CyberFlameGO/Lavalink-Client/tree/3ea412523817694cae8cc93ba2cc5f5c941f767c/src/main/java/lavalink/client/io/filters
+
 type FilterType string
 
 const (
@@ -52,42 +55,51 @@ const (
 	FilterTypeVibrato FilterType = "vibrato"
 )
 
-// See https://github.com/CyberFlameGO/Lavalink-Client/tree/3ea412523817694cae8cc93ba2cc5f5c941f767c/src/main/java/lavalink/client/io/filters
+var FilterDefaultKaraoke = lavalink.Karaoke{
+	Level:       1.0,
+	MonoLevel:   1.0,
+	FilterBand:  220.0,
+	FilterWidth: 100.0,
+}
+
+var FilterDefaultVibrato = lavalink.Vibrato{
+	Frequency: 2.0,
+	Depth:     0.5,
+}
+
 func (p *Player) Filter(ctx context.Context, guildID snowflake.ID, filter FilterType) (bool, error) {
 	lp := p.lavalink.Player(guildID)
 	if lp == nil {
 		return false, fmt.Errorf("no active nodes")
 	}
 
-	// NOTE:
-	// This disgolink function is bugged (https://github.com/disgoorg/disgolink/issues/59)
 	filters := lp.Filters()
-	enabled := false
+	enable := false
 	switch filter {
 	case FilterTypeKaraoke:
-		enabled = !(filters.Karaoke != nil)
-		if enabled {
+		enable = !(filters.Karaoke != nil && *filters.Karaoke != FilterDefaultKaraoke)
+		if enable {
 			filters.Karaoke = &lavalink.Karaoke{
-				Level:       1.0,
+				Level:       5.0,
 				MonoLevel:   1.0,
 				FilterBand:  220.0,
 				FilterWidth: 100.0,
 			}
 		} else {
-			filters.Karaoke = nil
+			filters.Karaoke = &FilterDefaultKaraoke
 		}
 	case FilterTypeVibrato:
-		enabled = !(filters.Vibrato != nil)
-		if enabled {
+		enable = !(filters.Vibrato != nil && *filters.Vibrato != FilterDefaultVibrato)
+		if enable {
 			filters.Vibrato = &lavalink.Vibrato{
-				Frequency: 2.0,
-				Depth:     0.5,
+				Frequency: 10.0,
+				Depth:     1,
 			}
 		} else {
-			filters.Vibrato = nil
+			filters.Vibrato = &FilterDefaultVibrato
 		}
 	default:
-		return enabled, fmt.Errorf("currently unsupported filter type: %s", filter)
+		return enable, fmt.Errorf("currently unsupported filter type: %s", filter)
 	}
 
 	return enabled, lp.Update(ctx, lavalink.WithFilters(filters))
@@ -248,41 +260,30 @@ func (p *Player) Skip(ctx context.Context, guildID snowflake.ID, count int) (*la
 	return track, nil
 }
 
-func (p *Player) AddNodes(ctx context.Context, configs ...disgolink.NodeConfig) ([]disgolink.Node, error) {
-	var (
-		errs  error
-		nodes []disgolink.Node
-		wg    sync.WaitGroup
-		m     sync.Mutex
-	)
+func (p *Player) Connect(ctx context.Context) error {
+	status := p.lavalink.BestNode().Status()
+	if status == disgolink.StatusConnecting || status == disgolink.StatusConnected || status == disgolink.StatusReconnecting {
+		return fmt.Errorf("nodes are already active")
+	}
 
-	for i := range configs {
-		cfg := configs[i]
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			node, err := p.lavalink.AddNode(ctx, disgolink.NodeConfig{
+	var g errgroup.Group
+	for _, cfg := range p.cfg.Nodes {
+		g.Go(func() error {
+			_, err := p.lavalink.AddNode(ctx, disgolink.NodeConfig{
 				Name:     cfg.Name,
 				Address:  cfg.Address,
 				Password: cfg.Password,
 				Secure:   cfg.Secure,
 			})
-
-			m.Lock()
-			if node != nil {
-				nodes = append(nodes, node)
-			}
-			errs = errors.Join(errs, err)
-			m.Unlock()
-		}()
+			return err
+		})
 	}
 
-	wg.Wait()
-	return nodes, errs
+	err := g.Wait()
+	return err
 }
 
-func (p *Player) Close() {
+func (p *Player) Disconnect() {
 	p.lavalink.Close()
 
 	p.m.Lock()
@@ -308,6 +309,7 @@ func New(discord bot.Client, cfg *config.LavalinkConfig) *Player {
 	)
 
 	player := &Player{
+		cfg:             cfg,
 		discord:         discord,
 		lavalink:        lavalink,
 		playingChannels: make(map[snowflake.ID]snowflake.ID),

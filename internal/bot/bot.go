@@ -33,8 +33,7 @@ func (b *RobotoBot) Start(cmds []discord.ApplicationCommandCreate, r *handler.Mu
 		g.Go(func() error {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
-
-			_, err := b.Player.AddNodes(ctx, b.Config.Lavalink.Nodes...)
+			err := b.Player.Connect(ctx)
 			return err
 		})
 	}
@@ -61,7 +60,7 @@ func (b *RobotoBot) Start(cmds []discord.ApplicationCommandCreate, r *handler.Mu
 func (b *RobotoBot) Stop() {
 	b.Discord.Close(context.Background())
 	if b.Player != nil {
-		b.Player.Close()
+		b.Player.Disconnect()
 	}
 }
 
