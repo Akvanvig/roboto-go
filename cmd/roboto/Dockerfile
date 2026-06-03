@@ -8,7 +8,7 @@ WORKDIR /build
 RUN go mod download
 RUN CGO_ENABLED=0 go build -o /out/roboto ./cmd/roboto
 
-FROM gcr.io/distroless/static-debian12
+FROM gcr.io/distroless/static-debian13
 
 COPY --from=builder /out/roboto /bot/roboto
 ENTRYPOINT [ "/bot/roboto" ]

@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Akvanvig/roboto-go/internal/ollama"
+	"dario.cat/mergo"
 	"github.com/disgoorg/disgolink/v3/disgolink"
 	"gopkg.in/yaml.v3"
 )
@@ -19,10 +19,26 @@ type LavalinkConfig struct {
 	Nodes []disgolink.NodeConfig `yaml:"nodes"`
 }
 
+type OllamaSystemPromptConfig struct {
+	Name         string `yaml:"name"`         // ¯\_(ツ)_/¯
+	Model        string `yaml:"model"`        // override model to use in ollama request. requires model present in ollama
+	Exclusive    bool   `yaml:"exclusive"`    // removes system-prompts earlier in the chain Default < Server < Channel
+	SystemPrompt string `yaml:"systemPrompt"` // system-prompt to provide when used
+}
+
+type OllamaConfig struct {
+	Server         string                              `yaml:"server,omitempty"`
+	ChatPath       string                              `yaml:"chatPath,omitempty"`
+	GeneratePath   string                              `yaml:"generatePath,omitempty"`
+	DefaultPrompt  OllamaSystemPromptConfig            `yaml:"defaultPrompt,omitempty"`
+	ServerPrompts  map[uint64]OllamaSystemPromptConfig `yaml:"serverPrompts,omitempty"`  // server/channel id as key
+	ChannelPrompts map[uint64]OllamaSystemPromptConfig `yaml:"channelPrompts,omitempty"` // server/channel id as key
+}
+
 type RobotoConfig struct {
 	Discord  DiscordConfig   `yaml:"discord"`
 	Lavalink *LavalinkConfig `yaml:"lavalink"` // Optional
-	Ollama   ollama.Ollama   `yaml:"ollama"`
+	Ollama   *OllamaConfig   `yaml:"ollama"`
 }
 
 func resolve(path string) (string, error) {
@@ -67,53 +83,6 @@ func load(paths ...string) (*RobotoConfig, error) {
 	return nil, errs
 }
 
-func merge(src *RobotoConfig, tgt *RobotoConfig) *RobotoConfig {
-	if src != nil {
-		if src.Discord.Token != "" {
-			tgt.Discord.Token = src.Discord.Token
-		}
-
-		// NOTE:
-		// This looks uuuuuugglys
-		if src.Lavalink != nil {
-			if tgt.Lavalink == nil {
-				tgt.Lavalink = src.Lavalink
-			} else {
-				if src.Lavalink.Nodes != nil {
-					if tgt.Lavalink.Nodes == nil {
-						tgt.Lavalink.Nodes = src.Lavalink.Nodes
-					} else {
-						for i := range src.Lavalink.Nodes {
-							if src.Lavalink.Nodes[i].Name != "" {
-								tgt.Lavalink.Nodes[i].Name = src.Lavalink.Nodes[i].Name
-							}
-							if src.Lavalink.Nodes[i].Address != "" {
-								tgt.Lavalink.Nodes[i].Address = src.Lavalink.Nodes[i].Address
-							}
-							if src.Lavalink.Nodes[i].Password != "" {
-								tgt.Lavalink.Nodes[i].Password = src.Lavalink.Nodes[i].Password
-							}
-
-							tgt.Lavalink.Nodes[i].Secure = src.Lavalink.Nodes[i].Secure
-						}
-
-						srcLen := len(src.Lavalink.Nodes)
-						tgtLen := len(tgt.Lavalink.Nodes)
-						if (srcLen - tgtLen) > 0 {
-							for i := tgtLen; i < srcLen; i += 1 {
-								tgt.Lavalink.Nodes = append(tgt.Lavalink.Nodes, src.Lavalink.Nodes[i])
-							}
-						}
-					}
-				}
-			}
-
-		}
-	}
-
-	return tgt
-}
-
 func validate(cfg *RobotoConfig) error {
 	var allErr error
 
@@ -150,7 +119,12 @@ func Load() (*RobotoConfig, error) {
 	}
 	cfgSecrets, _ := load(os.Getenv("BOT_CONFIG_SECRETS_PATH"), "./config_secrets.yaml", "./config_secrets.yml")
 
-	err = validate(merge(cfgSecrets, cfg))
+	err = mergo.Merge(cfg, cfgSecrets)
+	if err != nil {
+		return nil, fmt.Errorf("failed to merge config: %w", err)
+	}
+
+	err = validate(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate merged config: %w", err)
 	}

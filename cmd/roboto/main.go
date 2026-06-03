@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -8,42 +9,42 @@ import (
 	"github.com/Akvanvig/roboto-go/internal/bot"
 	"github.com/Akvanvig/roboto-go/internal/command"
 	"github.com/Akvanvig/roboto-go/internal/config"
-	"github.com/rs/zerolog/log"
 )
 
 func main() {
-	log.Info().Msg("Reading config...")
+	// TODO:
+	// We should send this logger downwards to our other functions
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
+	logger.Info("Reading config...")
 	cfg, err := config.Load()
 	if err != nil {
-		log.Panic().Err(err).Msg("Failed to read config")
+		logger.Error("Failed to read config", slog.Any("error", err))
+		panic(err)
 	}
 
-	log.Info().Msg("Initializing bot...")
-
+	logger.Info("Initializing bot...")
 	bot, err := bot.New(cfg)
 	if err != nil {
-		log.Panic().Err(err).Msg("Failed to initialize bot")
+		logger.Error("Failed to initialize bot", slog.Any("error", err))
+		panic(err)
 	}
 
+	logger.Info("Starting bot...")
 	cmds, r := command.New(bot)
-
-	log.Info().Msg("Starting bot...")
-
-	channel := make(chan os.Signal, 1)
-	signal.Notify(channel, syscall.SIGTERM, syscall.SIGINT)
-
 	err = bot.Start(cmds, r)
 	if err != nil {
-		log.Panic().Err(err).Msg("Failed to start bot")
+		logger.Error("Failed to start bot", slog.Any("error", err))
+		panic(err)
 	}
 
-	log.Info().Msg("Bot started, press Ctrl+C to exit")
+	logger.Info("Bot started, press Ctrl+C to exit")
+	channel := make(chan os.Signal, 1)
+	signal.Notify(channel, syscall.SIGTERM, syscall.SIGINT)
 	<-channel
 
-	log.Info().Msg("Shutting down bot...")
-
+	logger.Info("Shutting down bot...")
 	bot.Stop()
 
-	log.Info().Msg("Finished shutting down bot")
+	logger.Info("Finished shutting down bot")
 }

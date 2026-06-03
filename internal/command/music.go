@@ -12,31 +12,11 @@ import (
 	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/disgolink/v3/lavalink"
 	"github.com/disgoorg/json"
-	"github.com/rs/zerolog/log"
 )
 
 // See https://github.com/lavalink-devs/youtube-source/blob/ae2b8b316bcd2b2188652d682d2f7fb7dcbbcfd3/common/src/main/java/dev/lavalink/youtube/YoutubeAudioSourceManager.java#L42
-var RegexpYoutubeURL *regexp.Regexp
-var RegexpYoutubeURLAlt *regexp.Regexp
-
-func init() {
-	protocol := "(?:http://|https://|)"
-	domain := "(?:www\\.|m\\.|music\\.|)youtube\\.com"
-	domainShort := "(?:www\\.|)youtu\\.be"
-
-	regexpYoutube, err := regexp.Compile("^" + protocol + domain + "/.*")
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to compile youtube regexp")
-	}
-
-	regexpYoutubeAlt, err := regexp.Compile("^" + protocol + "(?:" + domain + "/(?:live|embed|shorts)|" + domainShort + ")/(?<videoId>.*)")
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to compile youtube regexp")
-	}
-
-	RegexpYoutubeURL = regexpYoutube
-	RegexpYoutubeURLAlt = regexpYoutubeAlt
-}
+var RegexpYoutubeURL = regexp.MustCompile("^(?:http://|https://|)(?:www\\.|m\\.|music\\.|)youtube\\.com/.*")
+var RegexpYoutubeURLAlt = regexp.MustCompile("^(?:http://|https://|)(?:(?:www\\.|m\\.|music\\.|)youtube\\.com/(?:live|embed|shorts)|(?:www\\.|)youtu\\.be)/(?<videoId>.*)")
 
 // -- BOOTSTRAP --
 
@@ -160,7 +140,7 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 				}
 			})
 
-			//r.SlashCommand("/filter", h.onFilter)
+			r.SlashCommand("/filter", h.onFilter)
 			r.SlashCommand("/volume", h.onVolume)
 			r.SlashCommand("/clear", h.onClear)
 			r.Component("/skip", h.onSkipButton)

@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Akvanvig/roboto-go/internal/config"
 	"github.com/disgoorg/json"
 
 	"github.com/disgoorg/disgo/bot"
@@ -299,7 +300,7 @@ func (p *Player) Close() {
 	}
 }
 
-func New(discord bot.Client) *Player {
+func New(discord bot.Client, cfg *config.LavalinkConfig) *Player {
 	lavalink := disgolink.New(discord.ApplicationID,
 		disgolink.WithPlugins(
 			lavaqueue.New(),

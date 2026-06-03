@@ -2,7 +2,7 @@ package bot
 
 import (
 	"context"
-	"sync"
+	"log/slog"
 	"time"
 
 	"github.com/Akvanvig/roboto-go/internal/config"
@@ -14,6 +14,7 @@ import (
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/gateway"
 	"github.com/disgoorg/disgo/handler"
+	"golang.org/x/sync/errgroup"
 )
 
 type RobotoBot struct {
@@ -22,44 +23,34 @@ type RobotoBot struct {
 	// Clients
 	Discord *bot.Client
 	Player  *player.Player
+	Ollama  *ollama.Ollama
 }
 
 func (b *RobotoBot) Start(cmds []discord.ApplicationCommandCreate, r *handler.Mux) error {
-	var wg sync.WaitGroup
+	var g errgroup.Group
 
-	// TODO:
-	// Proper error handling for sync commands
-	// and adding nodes
 	if b.Player != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
+		g.Go(func() error {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
-			b.Player.AddNodes(ctx, b.Config.Lavalink.Nodes...)
-		}()
+			_, err := b.Player.AddNodes(ctx, b.Config.Lavalink.Nodes...)
+			return err
+		})
 	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	g.Go(func() error {
 		b.Discord.AddEventListeners(r)
-		handler.SyncCommands(b.Discord, cmds, nil)
-	}()
+		err := handler.SyncCommands(b.Discord, cmds, nil)
+		return err
+	})
 
-	// add events
-	// fix at some point
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		eventListeners := ollama.New(b.Config.Ollama)
-		b.Discord.EventManager.AddEventListeners(eventListeners...)
-	}()
-	wg.Wait()
+	err := g.Wait()
+	if err != nil {
+		return err
+	}
 
-	err := b.Discord.OpenGateway(context.Background())
+	err = b.Discord.OpenGateway(context.Background())
 	if err != nil {
 		return err
 	}
@@ -74,6 +65,8 @@ func (b *RobotoBot) Stop() {
 	}
 }
 
+// TODO:
+// Use own logger
 func New(cfg *config.RobotoConfig) (*RobotoBot, error) {
 	roboto := &RobotoBot{
 		Config: cfg,
@@ -102,7 +95,16 @@ func New(cfg *config.RobotoConfig) (*RobotoBot, error) {
 
 	roboto.Discord = discord
 	if cfg.Lavalink != nil {
-		roboto.Player = player.New(*discord)
+		slog.Info("lavalink integrations enabled")
+		roboto.Player = player.New(*discord, cfg.Lavalink)
+	} else {
+		slog.Info("lavalink integrations disabled")
+	}
+	if cfg.Ollama != nil {
+		slog.Info("ollama integrations enabled")
+		roboto.Ollama = ollama.New(*discord, cfg.Ollama)
+	} else {
+		slog.Info("ollama integrations disabled")
 	}
 
 	return roboto, nil

@@ -6,43 +6,94 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+
+	"github.com/Akvanvig/roboto-go/internal/config"
+	"github.com/disgoorg/disgo/bot"
 )
+
+// structs
+// message model for the chat endpoint of ollama
+// https://docs.ollama.com/api/chat
+type OllamaChat struct {
+	Model       string              `json:"model"`    // required
+	Messages    []OllamaChatMessage `json:"messages"` // required
+	Tools       []OllamaChatTools   `json:"tools,omitzero"`
+	Format      string              `json:"format,omitempty"`
+	Options     OllamaChatOptions   `json:"options,omitzero"`
+	Stream      bool                `json:"stream"`
+	Think       string              `json:"think,omitempty"` // high, medium, low
+	KeepAlive   string              `json:"keep_alive,omitempty"`
+	Logprobs    bool                `json:"logprobs,omitempty"`
+	TopLogprobs int                 `json:"top_logprobs,omitempty"`
+}
+
+type OllamaChatMessage struct {
+	Role      string                `json:"role"`             // required "system","user","assistant" or "tool"
+	Content   string                `json:"content"`          // required
+	Images    []string              `json:"images,omitempty"` // base64-encoded image content
+	ToolCalls []OllamaChatToolCalls `json:"tool_calls,omitempty"`
+}
+
+// TODO
+type OllamaChatTools struct {
+}
+
+// TODO
+type OllamaChatToolCalls struct {
+}
+
+type OllamaChatOptions struct {
+	Seed        int     `json:"seed,omitempty"`
+	Temperature float64 `json:"temperature,omitempty"`
+	TopK        int     `json:"top_k,omitempty"`
+	TopP        float64 `json:"top_p,omitempty"`
+	MinP        float64 `json:"min_p,omitempty"`
+	Stop        string  `json:"stop,omitempty"`
+	NumCtx      int     `json:"num_ctx,omitempty"`
+	NumPredict  int     `json:"num_predict,omitempty"`
+}
+
+type OllamaChatResponse struct {
+	Model              string               `json:"model"`
+	CreatedAt          string               `json:"created_at"`
+	Message            OllamaChatMessage    `json:"message"`
+	Done               bool                 `json:"done"`
+	DoneReason         string               `json:"done_reason"`
+	TotalDuration      int                  `json:"total_duration"`
+	LoadDuration       int                  `json:"load_duration"`
+	PromptEvalCount    int                  `json:"prompt_eval_count"`
+	PromptEvalDuration int                  `json:"prompt_eval_duration"`
+	EvalCount          int                  `json:"eval_count"`
+	EvalDuration       int                  `json:"eval_duration"`
+	Logprobs           []OllamaChatLogProbs `json:"logprobs"`
+}
+
+// TODO
+type OllamaChatLogProbs struct {
+}
 
 // data for connecting to ollama server
 type Ollama struct {
-	Server         string                        `yaml:"server,omitempty"`
-	ChatPath       string                        `yaml:"chatPath,omitempty"`
-	GeneratePath   string                        `yaml:"generatePath,omitempty"`
-	DefaultPrompt  SystemPromptConfig            `yaml:"defaultPrompt,omitempty"`
-	ServerPrompts  map[uint64]SystemPromptConfig `yaml:"serverPrompts,omitempty"`  // server/channel id as key
-	ChannelPrompts map[uint64]SystemPromptConfig `yaml:"channelPrompts,omitempty"` // server/channel id as key
-}
-
-// config used for ollama queries
-type SystemPromptConfig struct {
-	Name         string `yaml:"name"`         // ¯\_(ツ)_/¯
-	Model        string `yaml:"model"`        // override model to use in ollama request. requires model present in ollama
-	Exclusive    bool   `yaml:"exclusive"`    // removes system-prompts earlier in the chain Default < Server < Channel
-	SystemPrompt string `yaml:"systemPrompt"` // system-prompt to provide when used
+	cfg *config.OllamaConfig
 }
 
 // returns a list of messages containing system prompt
 func (o *Ollama) model(server, channel uint64) string {
-	channelConfig := o.ChannelPrompts[channel]
-	serverConfig := o.ServerPrompts[server]
+	channelConfig := o.cfg.ChannelPrompts[channel]
+	serverConfig := o.cfg.ServerPrompts[server]
 	if channelConfig.Model != "" {
 		return serverConfig.Model
 	}
 	if serverConfig.Model != "" {
 		return serverConfig.Model
 	}
-	return o.DefaultPrompt.Model
+	return o.cfg.DefaultPrompt.Model
 }
 
 // returns a list of messages containing system prompt
 func (o *Ollama) systemPromts(server, channel uint64) (response []OllamaChatMessage) {
-	serverConfig := o.ServerPrompts[server]
-	channelConfig := o.ChannelPrompts[channel]
+	serverConfig := o.cfg.ServerPrompts[server]
+	channelConfig := o.cfg.ChannelPrompts[channel]
 
 	// channel specific config
 	if channelConfig.SystemPrompt != "" {
@@ -69,7 +120,7 @@ func (o *Ollama) systemPromts(server, channel uint64) (response []OllamaChatMess
 	// default config
 	response = append([]OllamaChatMessage{{
 		Role:    "system",
-		Content: o.DefaultPrompt.SystemPrompt,
+		Content: o.cfg.DefaultPrompt.SystemPrompt,
 	}}, response...)
 
 	return response
@@ -77,12 +128,11 @@ func (o *Ollama) systemPromts(server, channel uint64) (response []OllamaChatMess
 
 // do stuff
 func (o *Ollama) Chat(chat OllamaChat) (OllamaChatResponse, error) {
-
 	// bad validation probably
 	slog.Info("doing request", "chat", chat)
 
 	// invoke stuff
-	endpoint, _ := url.JoinPath(o.Server, o.ChatPath)
+	endpoint, _ := url.JoinPath(o.cfg.Server, o.cfg.ChatPath)
 	jsonData, err := json.Marshal(chat)
 	if err != nil {
 		return OllamaChatResponse{}, err
@@ -101,4 +151,15 @@ func (o *Ollama) Chat(chat OllamaChat) (OllamaChatResponse, error) {
 	err = jsonDecoder.Decode(&chatResp)
 
 	return chatResp, nil
+}
+
+func New(discord bot.Client, cfg *config.OllamaConfig) *Ollama {
+	ollama := &Ollama{
+		cfg: cfg,
+	}
+	discord.AddEventListeners(
+		bot.NewListenerFunc(ollama.onMessageCreate),
+	)
+
+	return ollama
 }

@@ -8,8 +8,6 @@
 - Improve search
     - Fix livestreams
 
-- fix configfile for chatter
-
 ## Config example
 
 ```yaml
