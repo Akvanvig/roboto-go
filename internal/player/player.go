@@ -102,7 +102,7 @@ func (p *Player) Filter(ctx context.Context, guildID snowflake.ID, filter Filter
 		return enable, fmt.Errorf("currently unsupported filter type: %s", filter)
 	}
 
-	return enabled, lp.Update(ctx, lavalink.WithFilters(filters))
+	return enable, lp.Update(ctx, lavalink.WithFilters(filters))
 }
 
 func (p *Player) Volume(ctx context.Context, guildID snowflake.ID, volume int) error {
