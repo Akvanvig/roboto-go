@@ -9,7 +9,13 @@ import (
 	"github.com/disgoorg/disgo/events"
 )
 
+// TODO:
+// Use internal logger
 func (o *Ollama) onMessageCreate(e *events.MessageCreate) {
+	if e.Message.Author.ID == e.Client().ID() {
+		return
+	}
+
 	// do not react to system, and only consider messages containing "hey chat" and responses to bot
 	if e.Message.Author.System || !strings.Contains(strings.ToLower(e.Message.Content), "hey chat") {
 		// does message reference bot?
