@@ -10,12 +10,16 @@ import (
 )
 
 func chatterEvents(event *events.MessageCreate) {
+	if event.Message.Author.ID != event.Client().ID() {
+		return
+	}
 	// do not react to system, and only consider messages containing "hey chat" and responses to bot
 	if event.Message.Author.System || !strings.Contains(strings.ToLower(event.Message.Content), "hey chat") {
 		// does message reference bot?
 		if !(event.Message.ReferencedMessage != nil && event.Message.ReferencedMessage.Author.ID == event.Client().ID()) {
 			return
 		}
+
 	}
 
 	// configure messages
