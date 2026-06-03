@@ -1,20 +1,21 @@
 package ollama
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"strings"
-	"time"
 
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 )
 
 func chatterEvents(event *events.MessageCreate) {
-	// do not react to system, and only consider messages containing "hey chat"
+	// do not react to system, and only consider messages containing "hey chat" and responses to bot
 	if event.Message.Author.System || !strings.Contains(strings.ToLower(event.Message.Content), "hey chat") {
-		return
+		// does message reference bot?
+		if !(event.Message.ReferencedMessage != nil && event.Message.ReferencedMessage.Author.ID == event.Client().ID()) {
+			return
+		}
 	}
 
 	// configure messages
@@ -27,9 +28,9 @@ func chatterEvents(event *events.MessageCreate) {
 	}
 
 	// go through referenced messages to get more context
-	// Might want to set a limit on loop at some point
+	// limited to 100 messages
 	nextMessage := event.Message.ReferencedMessage
-	for {
+	for range 100 {
 		// if no message is referenced, drop out of loop
 		if nextMessage == nil {
 			break
@@ -60,7 +61,6 @@ func chatterEvents(event *events.MessageCreate) {
 		Content: event.Message.Content,
 	})
 
-	context.WithTimeout(context.Background(), time.Second*20)
 	err := event.Client().Rest.SendTyping(event.ChannelID)
 	if err != nil {
 		slog.Warn("could not complete channel typing", "error", err)
