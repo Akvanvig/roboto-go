@@ -119,9 +119,12 @@ func Load() (*RobotoConfig, error) {
 	}
 	cfgSecrets, _ := load(os.Getenv("BOT_CONFIG_SECRETS_PATH"), "./config_secrets.yaml", "./config_secrets.yml")
 
-	err = mergo.Merge(cfg, cfgSecrets)
-	if err != nil {
-		return nil, fmt.Errorf("failed to merge config: %w", err)
+	// Don't attempt merge if we haven't resolvet any secret config
+	if cfgSecrets != nil {
+		err = mergo.Merge(cfg, cfgSecrets)
+		if err != nil {
+			return nil, fmt.Errorf("failed to merge config: %w", err)
+		}
 	}
 
 	err = validate(cfg)
