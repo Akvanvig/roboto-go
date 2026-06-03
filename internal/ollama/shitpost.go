@@ -10,7 +10,7 @@ import (
 )
 
 func chatterEvents(event *events.MessageCreate) {
-	if event.Message.Author.ID != event.Client().ID() {
+	if event.Message.Author.ID == event.Client().ID() {
 		return
 	}
 	// do not react to system, and only consider messages containing "hey chat" and responses to bot
