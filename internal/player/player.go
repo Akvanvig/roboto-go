@@ -261,9 +261,12 @@ func (p *Player) Skip(ctx context.Context, guildID snowflake.ID, count int) (*la
 }
 
 func (p *Player) Connect(ctx context.Context) error {
-	status := p.lavalink.BestNode().Status()
-	if status == disgolink.StatusConnecting || status == disgolink.StatusConnected || status == disgolink.StatusReconnecting {
-		return fmt.Errorf("nodes are already active")
+	node := p.lavalink.BestNode()
+	if node != nil {
+		status := node.Status()
+		if status == disgolink.StatusConnecting || status == disgolink.StatusConnected || status == disgolink.StatusReconnecting {
+			return fmt.Errorf("nodes are already active")
+		}
 	}
 
 	var g errgroup.Group
