@@ -64,8 +64,6 @@ func (b *RobotoBot) Stop() {
 	}
 }
 
-// TODO:
-// Use own logger
 func New(logger *slog.Logger, cfg *config.RobotoConfig) (*RobotoBot, error) {
 	roboto := &RobotoBot{
 		Config: cfg,
