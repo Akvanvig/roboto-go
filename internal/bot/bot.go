@@ -94,13 +94,13 @@ func New(logger *slog.Logger, cfg *config.RobotoConfig) (*RobotoBot, error) {
 	roboto.Discord = discord
 	if cfg.Lavalink != nil {
 		logger.Info("lavalink integrations enabled")
-		roboto.Player = player.New(*discord, cfg.Lavalink)
+		roboto.Player = player.New(discord, cfg.Lavalink)
 	} else {
 		logger.Info("lavalink integrations disabled")
 	}
 	if cfg.Ollama != nil {
 		logger.Info("ollama integrations enabled")
-		roboto.Ollama = ollama.New(*discord, cfg.Ollama)
+		roboto.Ollama = ollama.New(discord, cfg.Ollama)
 	} else {
 		logger.Info("ollama integrations disabled")
 	}

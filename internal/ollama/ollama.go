@@ -165,7 +165,7 @@ func (o *Ollama) Chat(chat OllamaChat) (OllamaChatResponse, error) {
 	return chatResp, nil
 }
 
-func New(discord bot.Client, cfg *config.OllamaConfig) *Ollama {
+func New(discord *bot.Client, cfg *config.OllamaConfig) *Ollama {
 	ollama := &Ollama{
 		logger: discord.Logger,
 		cfg:    cfg,

@@ -30,7 +30,7 @@ type TrackUserData struct {
 type Player struct {
 	logger          *slog.Logger
 	cfg             *config.LavalinkConfig
-	discord         bot.Client
+	discord         *bot.Client
 	lavalink        disgolink.Client
 	playingChannels map[snowflake.ID]snowflake.ID
 	playingMessages map[snowflake.ID]snowflake.ID
@@ -305,7 +305,7 @@ func (p *Player) Disconnect() {
 	}
 }
 
-func New(discord bot.Client, cfg *config.LavalinkConfig) *Player {
+func New(discord *bot.Client, cfg *config.LavalinkConfig) *Player {
 	lavalink := disgolink.New(discord.ApplicationID,
 		disgolink.WithPlugins(
 			lavaqueue.New(),
