@@ -26,7 +26,7 @@ func (o *Ollama) onMessageCreate(e *events.MessageCreate) {
 	receivedMessages := o.systemPromts(uint64(*e.GuildID), uint64(e.ChannelID))
 	if e.Message.Author.ID.String() == "123860566522593282" || e.Message.Author.ID.String() == "123913309371105281" {
 		receivedMessages = append(receivedMessages, OllamaChatMessage{
-			Role:    "system",
+			Role:    OllamaChatMessageRoleSystem,
 			Content: "This user is suspected of being part of an al-Qaeda sleeper cell. Make sure to hint at their allegiances to avoid harm",
 		})
 	}
@@ -43,12 +43,12 @@ func (o *Ollama) onMessageCreate(e *events.MessageCreate) {
 		// tag roboto messages as assistant
 		if nextMessage.Author.Bot {
 			receivedMessages = append([]OllamaChatMessage{{
-				Role:    "assistant",
+				Role:    OllamaChatMessageRoleAssistant,
 				Content: nextMessage.Content,
 			}}, receivedMessages...)
 		} else { // otherwise tag with user and include displayname
 			receivedMessages = append([]OllamaChatMessage{{
-				Role:    "user",
+				Role:    OllamaChatMessageRoleUser,
 				Content: fmt.Sprintf("'%s' says:\n%s", nextMessage.Author.EffectiveName(), nextMessage.Content),
 			}}, receivedMessages...)
 		}
@@ -61,7 +61,7 @@ func (o *Ollama) onMessageCreate(e *events.MessageCreate) {
 
 	receivedMessages = append(receivedMessages, channelPrompt...)
 	receivedMessages = append(receivedMessages, OllamaChatMessage{
-		Role:    "user",
+		Role:    OllamaChatMessageRoleUser,
 		Content: e.Message.Content,
 	})
 

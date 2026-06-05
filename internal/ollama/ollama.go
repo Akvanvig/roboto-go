@@ -29,11 +29,20 @@ type OllamaChat struct {
 }
 
 type OllamaChatMessage struct {
-	Role      string                `json:"role"`             // required "system","user","assistant" or "tool"
+	Role      OllamaChatMessageRole `json:"role"`             // required "system","user","assistant" or "tool"
 	Content   string                `json:"content"`          // required
 	Images    []string              `json:"images,omitempty"` // base64-encoded image content
 	ToolCalls []OllamaChatToolCalls `json:"tool_calls,omitempty"`
 }
+
+type OllamaChatMessageRole = string
+
+const (
+	OllamaChatMessageRoleSystem    OllamaChatMessageRole = "system"
+	OllamaChatMessageRoleUser      OllamaChatMessageRole = "user"
+	OllamaChatMessageRoleAssistant OllamaChatMessageRole = "assistant"
+	OllamaChatMessageRoleTool      OllamaChatMessageRole = "tool"
+)
 
 // TODO
 type OllamaChatTools struct {
