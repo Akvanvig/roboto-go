@@ -2,8 +2,10 @@ package player
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"sync"
 	"time"
 
@@ -248,13 +250,10 @@ func (p *Player) Skip(ctx context.Context, guildID snowflake.ID, count int) (*la
 
 	track, err := lavaqueue.QueueNextTrack(ctx, lp.Node(), guildID, count)
 	if err != nil {
-		// NOTE:
-		// Currently, lavalink.Error does not implement an unwrap interface,
-		// which in turn means that we can't use errors.As to unwrap
-		// and check for the http.StatusNotFound error code in the original error.
-		// Instead we just do a straight-up string comparison (stupid, yes)
-		if err.Error() == "No next track found" {
-			return nil, nil
+		if lavaErr, ok := errors.AsType[lavalink.Error](err); ok {
+			if lavaErr.Status == http.StatusNotFound {
+				return nil, nil
+			}
 		}
 		return nil, err
 	}
