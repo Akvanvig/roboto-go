@@ -75,8 +75,10 @@ func (p *Player) onQueueEnd(lp disgolink.Player, e lavaqueue.QueueEndEvent) {
 		time.Sleep(time.Second * 10)
 		track := lp.Track()
 		if track == nil {
-			ctx := context.Background()
-			_ = p.discord.UpdateVoiceState(ctx, e.GuildID(), nil, false, false)
+			err := p.discord.UpdateVoiceState(context.Background(), e.GuildID(), nil, false, false)
+			if err != nil {
+				p.logger.Warn("Failed to update voice state", slog.Any("error", err))
+			}
 		}
 
 	}()
