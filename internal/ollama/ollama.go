@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"slices"
 
 	"github.com/Akvanvig/roboto-go/internal/config"
 	"github.com/disgoorg/disgo/bot"
@@ -102,14 +103,14 @@ func (o *Ollama) model(server, channel uint64) string {
 }
 
 // returns a list of messages containing system prompt
-func (o *Ollama) systemPromts(server, channel uint64) (response []OllamaChatMessage) {
+func (o *Ollama) systemPrompts(server, channel uint64) (response []OllamaChatMessage) {
 	serverConfig := o.cfg.ServerPrompts[server]
 	channelConfig := o.cfg.ChannelPrompts[channel]
 
 	// channel specific config
 	if channelConfig.SystemPrompt != "" {
 		response = append(response, OllamaChatMessage{
-			Role:    "system",
+			Role:    OllamaChatMessageRoleSystem,
 			Content: channelConfig.SystemPrompt,
 		})
 		if channelConfig.Exclusive {
@@ -119,20 +120,20 @@ func (o *Ollama) systemPromts(server, channel uint64) (response []OllamaChatMess
 
 	// server specific config
 	if serverConfig.SystemPrompt != "" {
-		response = append([]OllamaChatMessage{{
-			Role:    "system",
+		response = slices.Insert(response, 0, OllamaChatMessage{
+			Role:    OllamaChatMessageRoleSystem,
 			Content: serverConfig.SystemPrompt,
-		}}, response...)
+		})
 		if serverConfig.Exclusive {
 			return
 		}
 	}
 
 	// default config
-	response = append([]OllamaChatMessage{{
-		Role:    "system",
+	response = slices.Insert(response, 0, OllamaChatMessage{
+		Role:    OllamaChatMessageRoleSystem,
 		Content: o.cfg.DefaultPrompt.SystemPrompt,
-	}}, response...)
+	})
 
 	return response
 }

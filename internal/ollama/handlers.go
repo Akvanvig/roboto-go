@@ -3,6 +3,7 @@ package ollama
 import (
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 
 	"github.com/disgoorg/disgo/discord"
@@ -23,7 +24,7 @@ func (o *Ollama) onMessageCreate(e *events.MessageCreate) {
 	}
 
 	// configure messages
-	receivedMessages := o.systemPromts(uint64(*e.GuildID), uint64(e.ChannelID))
+	receivedMessages := o.systemPrompts(uint64(*e.GuildID), uint64(e.ChannelID))
 	if e.Message.Author.ID.String() == "123860566522593282" || e.Message.Author.ID.String() == "123913309371105281" {
 		receivedMessages = append(receivedMessages, OllamaChatMessage{
 			Role:    OllamaChatMessageRoleSystem,
@@ -42,23 +43,24 @@ func (o *Ollama) onMessageCreate(e *events.MessageCreate) {
 
 		// tag roboto messages as assistant
 		if nextMessage.Author.Bot {
-			receivedMessages = append([]OllamaChatMessage{{
+			receivedMessages = slices.Insert(receivedMessages, 0, OllamaChatMessage{
 				Role:    OllamaChatMessageRoleAssistant,
 				Content: nextMessage.Content,
-			}}, receivedMessages...)
+			})
 		} else { // otherwise tag with user and include displayname
-			receivedMessages = append([]OllamaChatMessage{{
+			receivedMessages = slices.Insert(receivedMessages, 0, OllamaChatMessage{
 				Role:    OllamaChatMessageRoleUser,
 				Content: fmt.Sprintf("'%s' says:\n%s", nextMessage.Author.EffectiveName(), nextMessage.Content),
-			}}, receivedMessages...)
+			})
 		}
 
 		// set referenced message to next reference
 		nextMessage = nextMessage.ReferencedMessage
 	}
 
-	channelPrompt := o.systemPromts(uint64(*e.Message.GuildID), uint64(e.ChannelID))
-
+	// NOTE:
+	// The channel prompt should propably not be appended second to last
+	channelPrompt := o.systemPrompts(uint64(*e.Message.GuildID), uint64(e.ChannelID))
 	receivedMessages = append(receivedMessages, channelPrompt...)
 	receivedMessages = append(receivedMessages, OllamaChatMessage{
 		Role:    OllamaChatMessageRoleUser,
@@ -88,7 +90,7 @@ func (o *Ollama) onMessageCreate(e *events.MessageCreate) {
 		responseText = "hey, chat stared into the void and the void said nothing back."
 	}
 
-	_, err = e.Client().Rest.CreateMessage(e.ChannelID, discord.NewMessageCreate().WithContent(responseText).WithMessageReferenceByID(*&e.Message.ID))
+	_, err = e.Client().Rest.CreateMessage(e.ChannelID, discord.NewMessageCreate().WithContent(responseText).WithMessageReferenceByID(e.Message.ID))
 	if err != nil {
 		o.logger.Info("Send message failed", slog.Any("error", err))
 	}
