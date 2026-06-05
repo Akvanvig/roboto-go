@@ -194,7 +194,7 @@ func (p *Player) Add(ctx context.Context, guildID snowflake.ID, channelID snowfl
 	} else {
 		messageID := p.playingMessages[channelID]
 		_, err = p.discord.Rest.UpdateMessage(channelID, messageID, discord.MessageUpdate{
-			Components: json.Ptr(Components(false)),
+			Components: new(Components(false)),
 		})
 		return err
 	}
@@ -236,7 +236,7 @@ func (p *Player) Clear(ctx context.Context, guildID snowflake.ID) error {
 	channelID := p.playingMessages[guildID]
 	messageID := p.playingMessages[channelID]
 	_, err = p.discord.Rest.UpdateMessage(channelID, messageID, discord.MessageUpdate{
-		Components: json.Ptr(Components(true)),
+		Components: new(Components(true)),
 	})
 
 	return err

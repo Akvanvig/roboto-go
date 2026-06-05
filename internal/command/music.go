@@ -11,7 +11,6 @@ import (
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/disgolink/v3/lavalink"
-	"github.com/disgoorg/json"
 )
 
 // See https://github.com/lavalink-devs/youtube-source/blob/ae2b8b316bcd2b2188652d682d2f7fb7dcbbcfd3/common/src/main/java/dev/lavalink/youtube/YoutubeAudioSourceManager.java#L42
@@ -86,8 +85,8 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 						Name:        "number",
 						Description: "The volume percentage",
 						Required:    true,
-						MinValue:    json.Ptr(0),
-						MaxValue:    json.Ptr(100),
+						MinValue:    new(0),
+						MaxValue:    new(100),
 					},
 				},
 			},
@@ -111,8 +110,8 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 					channelID := h.Player.ChannelID(*e.GuildID())
 					if channelID == nil {
 						return e.Respond(discord.InteractionResponseTypeCreateMessage, discord.MessageUpdate{
-							Embeds: json.Ptr(Embeds("No music is currently playing", MessageColorError)),
-							Flags:  json.Ptr(discord.MessageFlagEphemeral),
+							Embeds: new(Embeds("No music is currently playing", MessageColorError)),
+							Flags:  new(discord.MessageFlagEphemeral),
 						})
 					}
 
@@ -120,8 +119,8 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 					if *channelID != e.Channel().ID() {
 						channel, _ := caches.Channel(*channelID)
 						return e.Respond(discord.InteractionResponseTypeCreateMessage, discord.MessageUpdate{
-							Embeds: json.Ptr(Embeds(fmt.Sprintf("Expecting music interactions in the %s channel", channel.Mention()), MessageColorError)),
-							Flags:  json.Ptr(discord.MessageFlagEphemeral),
+							Embeds: new(Embeds(fmt.Sprintf("Expecting music interactions in the %s channel", channel.Mention()), MessageColorError)),
+							Flags:  new(discord.MessageFlagEphemeral),
 						})
 					}
 
@@ -130,8 +129,8 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 					if botOk {
 						if !userOk || (*vsUser.ChannelID != *vsBot.ChannelID) {
 							return e.Respond(discord.InteractionResponseTypeCreateMessage, discord.MessageUpdate{
-								Embeds: json.Ptr(Embeds("Must be in the same voice channel as the bot to interact with it", MessageColorError)),
-								Flags:  json.Ptr(discord.MessageFlagEphemeral),
+								Embeds: new(Embeds("Must be in the same voice channel as the bot to interact with it", MessageColorError)),
+								Flags:  new(discord.MessageFlagEphemeral),
 							})
 						}
 					}
@@ -192,7 +191,7 @@ func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handl
 		func(tracks ...lavalink.Track) {
 			if len(tracks) == 0 {
 				e.UpdateInteractionResponse(discord.MessageUpdate{
-					Embeds: json.Ptr(Embeds(fmt.Sprintf("No results found for %s", q), MessageColorDefault)),
+					Embeds: new(Embeds(fmt.Sprintf("No results found for %s", q), MessageColorDefault)),
 				})
 				return
 			}
@@ -201,7 +200,7 @@ func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handl
 			if ok {
 				if *vsUser.ChannelID != *vsBot.ChannelID {
 					e.UpdateInteractionResponse(discord.MessageUpdate{
-						Embeds: json.Ptr(Embeds("Must be in the same voice channel as the bot to interact with it", MessageColorError)),
+						Embeds: new(Embeds("Must be in the same voice channel as the bot to interact with it", MessageColorError)),
 					})
 					return
 				}
@@ -209,7 +208,7 @@ func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handl
 				err := client.UpdateVoiceState(context.Background(), *e.GuildID(), vsUser.ChannelID, false, false)
 				if err != nil {
 					e.UpdateInteractionResponse(discord.MessageUpdate{
-						Embeds: json.Ptr(Embeds(err.Error(), MessageColorError)),
+						Embeds: new(Embeds(err.Error(), MessageColorError)),
 					})
 					return
 				}
@@ -218,24 +217,24 @@ func (h *MusicHandler) onPlay(data discord.SlashCommandInteractionData, e *handl
 			err := h.Player.Add(e.Ctx, *e.GuildID(), e.Channel().ID(), e.User(), tracks...)
 			if err != nil {
 				e.UpdateInteractionResponse(discord.MessageUpdate{
-					Embeds: json.Ptr(Embeds(err.Error(), MessageColorError)),
+					Embeds: new(Embeds(err.Error(), MessageColorError)),
 				})
 				return
 			}
 
 			e.UpdateInteractionResponse(discord.MessageUpdate{
-				Embeds: json.Ptr(player.Embeds("Added to queue", true, tracks...)),
+				Embeds: new(player.Embeds("Added to queue", true, tracks...)),
 			})
 		},
 		func(err error) {
 			e.UpdateInteractionResponse(discord.MessageUpdate{
-				Embeds: json.Ptr(Embeds(strings.TrimPrefix(err.Error(), "fault: "), MessageColorError)),
+				Embeds: new(Embeds(strings.TrimPrefix(err.Error(), "fault: "), MessageColorError)),
 			})
 		},
 	)
 	if err != nil {
 		_, err = e.UpdateInteractionResponse(discord.MessageUpdate{
-			Embeds: json.Ptr(Embeds("Failed to search for song", MessageColorError)),
+			Embeds: new(Embeds("Failed to search for song", MessageColorError)),
 		})
 		return err
 	}
