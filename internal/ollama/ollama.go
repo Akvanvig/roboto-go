@@ -3,6 +3,7 @@ package ollama
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -144,7 +145,7 @@ func (o *Ollama) Chat(chat OllamaChat) (OllamaChatResponse, error) {
 		return OllamaChatResponse{}, err
 	}
 	if resp.StatusCode != 200 {
-		o.logger.Warn("response returned error code", slog.Int("code", resp.StatusCode), slog.String("status", resp.Status))
+		return OllamaChatResponse{}, fmt.Errorf("received non-successful error code '%d' status '%s", resp.StatusCode, resp.Status)
 	}
 
 	var chatResp OllamaChatResponse

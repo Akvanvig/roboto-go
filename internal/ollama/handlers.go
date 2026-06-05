@@ -9,8 +9,6 @@ import (
 	"github.com/disgoorg/disgo/events"
 )
 
-// TODO:
-// Use internal logger
 func (o *Ollama) onMessageCreate(e *events.MessageCreate) {
 	if e.Message.Author.ID == e.Client().ID() {
 		return
@@ -69,7 +67,7 @@ func (o *Ollama) onMessageCreate(e *events.MessageCreate) {
 
 	err := e.Client().Rest.SendTyping(e.ChannelID)
 	if err != nil {
-		o.logger.Warn("could not complete channel typing", slog.Any("error", err))
+		o.logger.Warn("Could not complete channel typing", slog.Any("error", err))
 	}
 
 	// do chatting
@@ -84,7 +82,7 @@ func (o *Ollama) onMessageCreate(e *events.MessageCreate) {
 	responseText := response.Message.Content
 
 	if err != nil {
-		o.logger.Error("failed to chat", slog.Any("error", err))
+		o.logger.Error("Failed to chat", slog.Any("error", err))
 		responseText = "hey, chat is currently out touching grass 🌱\nthe AI backend isn't responding right now — try again in a bit."
 	} else if responseText == "" {
 		responseText = "hey, chat stared into the void and the void said nothing back."
@@ -92,8 +90,8 @@ func (o *Ollama) onMessageCreate(e *events.MessageCreate) {
 
 	_, err = e.Client().Rest.CreateMessage(e.ChannelID, discord.NewMessageCreate().WithContent(responseText).WithMessageReferenceByID(*&e.Message.ID))
 	if err != nil {
-		o.logger.Info("send message failed", slog.Any("error", err))
+		o.logger.Info("Send message failed", slog.Any("error", err))
 	}
 
-	o.logger.Info("message sent")
+	o.logger.Info("Message sent")
 }
