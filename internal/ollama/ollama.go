@@ -74,7 +74,8 @@ type OllamaChatLogProbs struct {
 
 // data for connecting to ollama server
 type Ollama struct {
-	cfg *config.OllamaConfig
+	logger *slog.Logger
+	cfg    *config.OllamaConfig
 }
 
 // returns a list of messages containing system prompt
@@ -129,7 +130,7 @@ func (o *Ollama) systemPromts(server, channel uint64) (response []OllamaChatMess
 // do stuff
 func (o *Ollama) Chat(chat OllamaChat) (OllamaChatResponse, error) {
 	// bad validation probably
-	slog.Info("doing request", "chat", chat)
+	o.logger.Info("doing request", slog.Any("chat", chat))
 
 	// invoke stuff
 	endpoint, _ := url.JoinPath(o.cfg.Server, o.cfg.ChatPath)
@@ -143,7 +144,7 @@ func (o *Ollama) Chat(chat OllamaChat) (OllamaChatResponse, error) {
 		return OllamaChatResponse{}, err
 	}
 	if resp.StatusCode != 200 {
-		slog.Warn("responsecode is not 200", "code", resp.StatusCode, "status", resp.Status)
+		o.logger.Warn("response returned error code", slog.Int("code", resp.StatusCode), slog.String("status", resp.Status))
 	}
 
 	var chatResp OllamaChatResponse
@@ -155,7 +156,8 @@ func (o *Ollama) Chat(chat OllamaChat) (OllamaChatResponse, error) {
 
 func New(discord bot.Client, cfg *config.OllamaConfig) *Ollama {
 	ollama := &Ollama{
-		cfg: cfg,
+		logger: discord.Logger,
+		cfg:    cfg,
 	}
 	discord.AddEventListeners(
 		bot.NewListenerFunc(ollama.onMessageCreate),

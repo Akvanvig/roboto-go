@@ -3,6 +3,7 @@ package player
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -25,6 +26,7 @@ type TrackUserData struct {
 }
 
 type Player struct {
+	logger          *slog.Logger
 	cfg             *config.LavalinkConfig
 	discord         bot.Client
 	lavalink        disgolink.Client
@@ -312,6 +314,7 @@ func New(discord bot.Client, cfg *config.LavalinkConfig) *Player {
 	)
 
 	player := &Player{
+		logger:          discord.Logger,
 		cfg:             cfg,
 		discord:         discord,
 		lavalink:        lavalink,

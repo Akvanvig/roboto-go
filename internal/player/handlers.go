@@ -2,6 +2,7 @@ package player
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/disgoorg/disgo/discord"
@@ -9,7 +10,6 @@ import (
 	"github.com/disgoorg/disgolink/v3/disgolink"
 	"github.com/disgoorg/disgolink/v3/lavalink"
 	"github.com/disgoorg/lavaqueue-plugin"
-	"github.com/rs/zerolog/log"
 )
 
 func (p *Player) onVoiceServerUpdate(e *events.VoiceServerUpdate) {
@@ -53,20 +53,20 @@ func (p *Player) onTrackEnd(lp disgolink.Player, e lavalink.TrackEndEvent) {
 	channelID := p.playingChannels[guildID]
 	messageID, ok := p.playingMessages[channelID]
 	if !ok {
-		log.Warn().Msgf("Failed to find the playing message for channel ID '%s'", channelID)
+		p.logger.Warn("Failed to find the playing message", slog.Any("channel_id", channelID))
 		return
 	}
 
 	err := p.discord.Rest.DeleteMessage(channelID, messageID)
 	if err != nil {
-		log.Warn().Err(err).Msgf("Failed to delete the message with ID '%s' in channel ID '%s'", messageID, channelID)
+		p.logger.Warn("Failed to delete playing message", slog.Any("channel_id", channelID), slog.Any("message_id", messageID))
 	}
 }
 
 func (p *Player) onTrackException(lp disgolink.Player, e lavalink.TrackExceptionEvent) {
 	// A suspicious exception indicates that youtube tried blocking us
 	if e.Exception.Severity == lavalink.SeveritySuspicious {
-		log.Warn().Msgf("Failed to play the track '%s': %s", e.Track.Info.Title, e.Exception.Error())
+		p.logger.Warn("Failed to play track", slog.String("track_name", e.Track.Info.Title), slog.Any("error", e.Exception))
 	}
 }
 

@@ -66,12 +66,13 @@ func (b *RobotoBot) Stop() {
 
 // TODO:
 // Use own logger
-func New(cfg *config.RobotoConfig) (*RobotoBot, error) {
+func New(logger *slog.Logger, cfg *config.RobotoConfig) (*RobotoBot, error) {
 	roboto := &RobotoBot{
 		Config: cfg,
 	}
 
 	discord, err := disgo.New(cfg.Discord.Token,
+		bot.WithLogger(logger),
 		bot.WithGatewayConfigOpts(
 			gateway.WithIntents(
 				gateway.IntentGuilds,
@@ -94,16 +95,16 @@ func New(cfg *config.RobotoConfig) (*RobotoBot, error) {
 
 	roboto.Discord = discord
 	if cfg.Lavalink != nil {
-		slog.Info("lavalink integrations enabled")
+		logger.Info("lavalink integrations enabled")
 		roboto.Player = player.New(*discord, cfg.Lavalink)
 	} else {
-		slog.Info("lavalink integrations disabled")
+		logger.Info("lavalink integrations disabled")
 	}
 	if cfg.Ollama != nil {
-		slog.Info("ollama integrations enabled")
+		logger.Info("ollama integrations enabled")
 		roboto.Ollama = ollama.New(*discord, cfg.Ollama)
 	} else {
-		slog.Info("ollama integrations disabled")
+		logger.Info("ollama integrations disabled")
 	}
 
 	return roboto, nil

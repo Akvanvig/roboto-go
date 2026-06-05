@@ -36,7 +36,7 @@ type OllamaConfig struct {
 }
 
 type RobotoConfig struct {
-	Discord  DiscordConfig   `yaml:"discord"`
+	Discord  *DiscordConfig  `yaml:"discord"`
 	Lavalink *LavalinkConfig `yaml:"lavalink"` // Optional
 	Ollama   *OllamaConfig   `yaml:"ollama"`
 }
@@ -84,34 +84,38 @@ func load(paths ...string) (*RobotoConfig, error) {
 }
 
 func validate(cfg *RobotoConfig) error {
-	var allErr error
+	var errs error
 
-	if cfg.Discord.Token == "" {
-		allErr = errors.Join(allErr, fmt.Errorf("discord config is missing a required token"))
+	if cfg.Discord != nil {
+		if cfg.Discord.Token == "" {
+			errs = errors.Join(errs, fmt.Errorf("discord config is missing a required token"))
+		}
+	} else {
+		errs = errors.Join(errs, fmt.Errorf("discord config is missing"))
 	}
 
 	if cfg.Lavalink != nil {
 		nodes := cfg.Lavalink.Nodes
 		if len(nodes) == 0 {
-			allErr = errors.Join(allErr, fmt.Errorf("lavalink config must contain a list of nodes"))
+			errs = errors.Join(errs, fmt.Errorf("lavalink config must contain a list of nodes"))
 		}
 
 		for i := range nodes {
 			node := nodes[i]
 			if node.Address == "" {
-				allErr = errors.Join(allErr, fmt.Errorf("lavalink config is missing a required address for node %d", i+1))
+				errs = errors.Join(errs, fmt.Errorf("lavalink config is missing a required address for node %d", i+1))
 			}
 			if node.Password == "" {
-				allErr = errors.Join(allErr, fmt.Errorf("lavalink config is missing a required password for node %d", i+1))
+				errs = errors.Join(errs, fmt.Errorf("lavalink config is missing a required password for node %d", i+1))
 			}
 		}
 
 	}
 
-	return allErr
+	return errs
 }
 
-func Load() (*RobotoConfig, error) {
+func New() (*RobotoConfig, error) {
 	// Read config
 	cfg, err := load(os.Getenv("BOT_CONFIG_PATH"), "./config.yaml", "./config.yml")
 	if err != nil {
