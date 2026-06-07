@@ -100,7 +100,7 @@ func (o *Ollama) onMessageCreate(e *events.MessageCreate) {
 	} else {
 		// NOTE:
 		// Let's avoid pinging groups
-		answer = RegexpDiscordGroupMention.ReplaceAllString(answer, e.Message.Author.Mention())
+		answer = RegexpDiscordGroupMention.ReplaceAllString(res.Message.Content, e.Message.Author.Mention())
 	}
 
 	_, err = e.Client().Rest.CreateMessage(e.ChannelID, discord.NewMessageCreate().WithContent(answer).WithMessageReferenceByID(e.Message.ID))
