@@ -49,7 +49,7 @@ func (o *Ollama) onMessageCreate(e *events.MessageCreate) {
 		}
 
 		// Retrieve message if in cache to get more complete data
-		if cachedRef, ok := e.Client().Caches.Message(e.ChannelID, ref.ID); ok {
+		if cachedRef, ok := e.Client().Caches.Message(ref.ChannelID, ref.ID); ok {
 			ref = &cachedRef
 		}
 
