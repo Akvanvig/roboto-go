@@ -3,12 +3,15 @@ package ollama
 import (
 	"fmt"
 	"log/slog"
+	"regexp"
 	"slices"
 	"strings"
 
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 )
+
+var RegexpDiscordGroupMention = regexp.MustCompile("(?:@everyone)|(?:@here)|(?:<@&[0-9]{1,18}>)")
 
 func (o *Ollama) onMessageCreate(e *events.MessageCreate) {
 	if e.Message.Author.System || e.Message.Author.ID == e.Client().ID() {
@@ -95,7 +98,9 @@ func (o *Ollama) onMessageCreate(e *events.MessageCreate) {
 	} else if res.Message.Content == "" {
 		answer = "hey, chat stared into the void and the void said nothing back."
 	} else {
-		answer = res.Message.Content
+		// NOTE:
+		// Let's avoid pinging groups
+		answer = RegexpDiscordGroupMention.ReplaceAllString(answer, e.Message.Author.Mention())
 	}
 
 	_, err = e.Client().Rest.CreateMessage(e.ChannelID, discord.NewMessageCreate().WithContent(answer).WithMessageReferenceByID(e.Message.ID))
