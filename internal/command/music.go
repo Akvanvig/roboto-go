@@ -94,6 +94,18 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 				Name:        "clear",
 				Description: "Clear the music queue",
 			},
+			discord.ApplicationCommandOptionSubCommand{
+				Name:        "skip",
+				Description: "Skip one or more songs",
+				Options: []discord.ApplicationCommandOption{
+					discord.ApplicationCommandOptionInt{
+						Name:        "number",
+						Description: "The number of songs to skip",
+						MinValue:    new(1),
+						MaxValue:    new(999),
+					},
+				},
+			},
 		},
 	}
 
@@ -142,9 +154,10 @@ func musicCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 			r.SlashCommand("/filter", h.onFilter)
 			r.SlashCommand("/volume", h.onVolume)
 			r.SlashCommand("/clear", h.onClear)
-			r.Component("/skip", h.onSkipButton)
-			r.Component("/stop", h.onStopButton)
-			r.Component("/queue", h.onQueueButton)
+			r.SlashCommand("/skip", h.onSkip)
+			r.Component("/skipbtn", h.onSkipButton)
+			r.Component("/stopbtn", h.onStopButton)
+			r.Component("/queuebtn", h.onQueueButton)
 		})
 	})
 
@@ -276,6 +289,31 @@ func (h *MusicHandler) onVolume(data discord.SlashCommandInteractionData, e *han
 
 	return e.CreateMessage(discord.MessageCreate{
 		Embeds: Embeds(fmt.Sprintf("Set volume to %d%%", volume), MessageColorDefault),
+	})
+}
+
+func (h *MusicHandler) onSkip(data discord.SlashCommandInteractionData, e *handler.CommandEvent) error {
+	number, ok := data.OptInt("number")
+	if !ok {
+		number = 1
+	}
+
+	track, err := h.Player.Skip(e.Ctx, *e.GuildID(), number)
+	if err != nil {
+		return e.CreateMessage(discord.MessageCreate{
+			Embeds: Embeds("Failed to skip current song(s)", MessageColorError),
+			Flags:  discord.MessageFlagEphemeral,
+		})
+	}
+	if track == nil {
+		return e.CreateMessage(discord.MessageCreate{
+			Embeds: Embeds("Queue is currently empty", MessageColorDefault),
+			Flags:  discord.MessageFlagEphemeral,
+		})
+	}
+
+	return e.CreateMessage(discord.MessageCreate{
+		Embeds: Embeds("Skipped song(s)", MessageColorDefault),
 	})
 }
 

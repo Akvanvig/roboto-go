@@ -11,6 +11,7 @@ import (
 
 	"github.com/Akvanvig/roboto-go/internal/config"
 	"github.com/disgoorg/disgo/bot"
+	"github.com/disgoorg/snowflake/v2"
 )
 
 // structs
@@ -89,53 +90,46 @@ type Ollama struct {
 	cfg    *config.OllamaConfig
 }
 
-// returns a list of messages containing system prompt
-func (o *Ollama) model(server, channel uint64) string {
-	channelConfig := o.cfg.ChannelPrompts[channel]
-	serverConfig := o.cfg.ServerPrompts[server]
-	if channelConfig.Model != "" {
-		return serverConfig.Model
+// Get system model
+func (o *Ollama) model(guildID snowflake.ID, channelID snowflake.ID) string {
+	if cfg := o.cfg.ChannelPrompts[channelID]; cfg.Model != "" {
+		return cfg.Model
 	}
-	if serverConfig.Model != "" {
-		return serverConfig.Model
+	if cfg := o.cfg.ServerPrompts[guildID]; cfg.Model != "" {
+		return cfg.Model
 	}
 	return o.cfg.DefaultPrompt.Model
 }
 
-// returns a list of messages containing system prompt
-func (o *Ollama) systemPrompts(server, channel uint64) (response []OllamaChatMessage) {
-	serverConfig := o.cfg.ServerPrompts[server]
-	channelConfig := o.cfg.ChannelPrompts[channel]
+// Get system prompts
+func (o *Ollama) prompts(guildID snowflake.ID, channelID snowflake.ID) []OllamaChatMessage {
+	prompts := make([]OllamaChatMessage, 0, 3)
 
-	// channel specific config
-	if channelConfig.SystemPrompt != "" {
-		response = append(response, OllamaChatMessage{
+	if cfg := o.cfg.ChannelPrompts[channelID]; cfg.SystemPrompt != "" {
+		prompts = append(prompts, OllamaChatMessage{
 			Role:    OllamaChatMessageRoleSystem,
-			Content: channelConfig.SystemPrompt,
+			Content: cfg.SystemPrompt,
 		})
-		if channelConfig.Exclusive {
-			return
+		if cfg.Exclusive {
+			return prompts
+		}
+	}
+	if cfg := o.cfg.ServerPrompts[guildID]; cfg.SystemPrompt != "" {
+		prompts = slices.Insert(prompts, 0, OllamaChatMessage{
+			Role:    OllamaChatMessageRoleSystem,
+			Content: cfg.SystemPrompt,
+		})
+		if cfg.Exclusive {
+			return prompts
 		}
 	}
 
-	// server specific config
-	if serverConfig.SystemPrompt != "" {
-		response = slices.Insert(response, 0, OllamaChatMessage{
-			Role:    OllamaChatMessageRoleSystem,
-			Content: serverConfig.SystemPrompt,
-		})
-		if serverConfig.Exclusive {
-			return
-		}
-	}
-
-	// default config
-	response = slices.Insert(response, 0, OllamaChatMessage{
+	// Default
+	prompts = slices.Insert(prompts, 0, OllamaChatMessage{
 		Role:    OllamaChatMessageRoleSystem,
 		Content: o.cfg.DefaultPrompt.SystemPrompt,
 	})
-
-	return response
+	return prompts
 }
 
 // do stuff

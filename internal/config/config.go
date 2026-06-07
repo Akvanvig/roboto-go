@@ -8,6 +8,7 @@ import (
 
 	"dario.cat/mergo"
 	"github.com/disgoorg/disgolink/v3/disgolink"
+	"github.com/disgoorg/snowflake/v2"
 	"gopkg.in/yaml.v3"
 )
 
@@ -27,12 +28,12 @@ type OllamaSystemPromptConfig struct {
 }
 
 type OllamaConfig struct {
-	Server         string                              `yaml:"server,omitempty"`
-	ChatPath       string                              `yaml:"chatPath,omitempty"`
-	GeneratePath   string                              `yaml:"generatePath,omitempty"`
-	DefaultPrompt  OllamaSystemPromptConfig            `yaml:"defaultPrompt,omitempty"`
-	ServerPrompts  map[uint64]OllamaSystemPromptConfig `yaml:"serverPrompts,omitempty"`  // server/channel id as key
-	ChannelPrompts map[uint64]OllamaSystemPromptConfig `yaml:"channelPrompts,omitempty"` // server/channel id as key
+	Server         string                                    `yaml:"server,omitempty"`
+	ChatPath       string                                    `yaml:"chatPath,omitempty"`
+	GeneratePath   string                                    `yaml:"generatePath,omitempty"`
+	DefaultPrompt  OllamaSystemPromptConfig                  `yaml:"defaultPrompt,omitempty"`
+	ServerPrompts  map[snowflake.ID]OllamaSystemPromptConfig `yaml:"serverPrompts,omitempty"`  // server/channel id as key
+	ChannelPrompts map[snowflake.ID]OllamaSystemPromptConfig `yaml:"channelPrompts,omitempty"` // server/channel id as key
 }
 
 type RobotoConfig struct {
