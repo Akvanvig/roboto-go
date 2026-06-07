@@ -133,7 +133,7 @@ func (o *Ollama) prompts(guildID snowflake.ID, channelID snowflake.ID) []OllamaC
 }
 
 // do stuff
-func (o *Ollama) Chat(chat OllamaChat) (OllamaChatResponse, error) {
+func (o *Ollama) Chat(chat OllamaChat) (*OllamaChatResponse, error) {
 	// bad validation probably
 	o.logger.Info("doing request", slog.Any("chat", chat))
 
@@ -141,22 +141,22 @@ func (o *Ollama) Chat(chat OllamaChat) (OllamaChatResponse, error) {
 	endpoint, _ := url.JoinPath(o.cfg.Server, o.cfg.ChatPath)
 	jsonData, err := json.Marshal(chat)
 	if err != nil {
-		return OllamaChatResponse{}, err
+		return nil, err
 	}
 
 	resp, err := http.Post(endpoint, "application/json", bytes.NewBufferString(string(jsonData)))
 	if err != nil {
-		return OllamaChatResponse{}, err
+		return nil, err
 	}
 	if resp.StatusCode != 200 {
-		return OllamaChatResponse{}, fmt.Errorf("received non-successful error code '%d' status '%s", resp.StatusCode, resp.Status)
+		return nil, fmt.Errorf("received non-successful error code '%d' status '%s", resp.StatusCode, resp.Status)
 	}
 
 	var chatResp OllamaChatResponse
 	jsonDecoder := json.NewDecoder(resp.Body)
 	err = jsonDecoder.Decode(&chatResp)
 
-	return chatResp, nil
+	return &chatResp, nil
 }
 
 func New(discord *bot.Client, cfg *config.OllamaConfig) *Ollama {

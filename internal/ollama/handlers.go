@@ -92,12 +92,14 @@ func (o *Ollama) onMessageCreate(e *events.MessageCreate) {
 		Stream: false,
 	})
 
-	answer := res.Message.Content
+	var answer string
 	if err != nil {
 		o.logger.Error("Failed to chat", slog.Any("error", err))
 		answer = "hey, chat is currently out touching grass 🌱\nthe AI backend isn't responding right now — try again in a bit."
-	} else if answer == "" {
+	} else if res.Message.Content == "" {
 		answer = "hey, chat stared into the void and the void said nothing back."
+	} else {
+		answer = res.Message.Content
 	}
 
 	_, err = e.Client().Rest.CreateMessage(e.ChannelID, discord.NewMessageCreate().WithContent(answer).WithMessageReferenceByID(e.Message.ID))
