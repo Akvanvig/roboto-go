@@ -11,7 +11,7 @@ import (
 	"github.com/disgoorg/disgo/events"
 )
 
-var RegexpDiscordGroupMention = regexp.MustCompile("(?:@everyone)|(?:@here)|(?:<@&[0-9]{1,18}>)")
+var RegexpDiscordGroupMention = regexp.MustCompile("(?:@everyone)|(?:@here)|(?:<@&[0-9]{1,32}>)")
 
 func (o *Ollama) onMessageCreate(e *events.MessageCreate) {
 	if e.Message.Author.System || e.Message.Author.ID == e.Client().ID() {
