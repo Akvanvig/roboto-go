@@ -82,6 +82,7 @@ func New(logger *slog.Logger, cfg *config.RobotoConfig) (*RobotoBot, error) {
 		),
 		bot.WithCacheConfigOpts(
 			cache.WithCaches(
+				cache.FlagMessages,
 				cache.FlagGuilds,
 				cache.FlagVoiceStates,
 			),
