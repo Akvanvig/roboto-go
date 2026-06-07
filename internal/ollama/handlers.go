@@ -32,12 +32,12 @@ func (o *Ollama) onMessageCreate(e *events.MessageCreate) {
 	// We build the message list in a reverse order to make it easier to
 	// append referenced messages. After building the list, we reverse it before sending it
 	// to the Ollama API.
-	messages := make([]OllamaChatMessage, 0, 50)
+	messages := make([]OllamaChatMessage, 0, 30)
 
 	// Build current message context
 	messages = append(messages, OllamaChatMessage{
 		Role:    OllamaChatMessageRoleUser,
-		Content: e.Message.Content,
+		Content: fmt.Sprintf("'%s' says:\n%s", e.Message.Author.Mention(), e.Message.Content),
 	})
 
 	// Build previous bot and user context (max 100 messages)
@@ -62,7 +62,7 @@ func (o *Ollama) onMessageCreate(e *events.MessageCreate) {
 		} else {
 			messages = append(messages, OllamaChatMessage{
 				Role:    OllamaChatMessageRoleUser,
-				Content: fmt.Sprintf("'%s' says:\n%s", ref.Author.EffectiveName(), ref.Content),
+				Content: fmt.Sprintf("'%s' says:\n%s", ref.Author.Mention(), ref.Content),
 			})
 		}
 
@@ -70,15 +70,6 @@ func (o *Ollama) onMessageCreate(e *events.MessageCreate) {
 	}
 
 	// Build system context
-	// TODO:
-	// We shouldn't hardcode these checks. It'd be better to make these configurable in the config
-	if e.Message.Author.ID.String() == "123860566522593282" || e.Message.Author.ID.String() == "123913309371105281" {
-		messages = append(messages, OllamaChatMessage{
-			Role:    OllamaChatMessageRoleSystem,
-			Content: "This user is suspected of being part of an al-Qaeda sleeper cell. Make sure to hint at their allegiances to avoid harm",
-		})
-	}
-
 	prompts := o.prompts(*e.GuildID, e.ChannelID)
 	slices.Reverse(prompts)
 	messages = append(messages, prompts...)
