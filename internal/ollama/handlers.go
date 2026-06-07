@@ -48,6 +48,11 @@ func (o *Ollama) onMessageCreate(e *events.MessageCreate) {
 			break
 		}
 
+		// Retrieve message if in cache to get more complete data
+		if cachedRef, ok := e.Client().Caches.Message(e.ChannelID, ref.ID); ok {
+			ref = &cachedRef
+		}
+
 		// Tag bot messages with the assistant role, and normal user messages the user role
 		if ref.Author.Bot {
 			messages = append(messages, OllamaChatMessage{
