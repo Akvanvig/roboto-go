@@ -13,7 +13,8 @@ import (
 )
 
 type DiscordConfig struct {
-	Token string `yaml:"token"`
+	Token          string       `yaml:"token"`
+	DebugChannelID snowflake.ID `yaml:"debugChannelId,omitempty"`
 }
 
 type LavalinkConfig struct {
