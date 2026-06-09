@@ -42,7 +42,7 @@ func (h *DiscordDebugHandler) Handle(ctx context.Context, r slog.Record) error {
 		channelID := h.roboto.Config.Discord.DebugChannelID
 		if channelID > 0 {
 			msg := fmt.Sprintf("%s %s %s", r.Time.UTC(), r.Level.String(), r.Message)
-			_, err = h.roboto.Discord.Rest.CreateMessage(h.roboto.Config.Discord.DebugChannelID, discord.NewMessageCreate().WithContent(msg))
+			_, err = h.roboto.Discord.Rest.CreateMessage(channelID, discord.NewMessageCreate().WithContent(msg))
 		}
 	}
 	return err

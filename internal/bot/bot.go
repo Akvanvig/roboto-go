@@ -69,7 +69,7 @@ func New(logger *slog.Logger, cfg *config.RobotoConfig) (*RobotoBot, error) {
 		Config: cfg,
 	}
 
-	logger = slog.New(NewDiscordDebugHandler(roboto, logger.Handler()))
+	logger = slog.New(NewDebugHandler(roboto, logger.Handler()))
 	discord, err := disgo.New(cfg.Discord.Token,
 		bot.WithLogger(logger),
 		bot.WithGatewayConfigOpts(

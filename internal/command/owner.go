@@ -49,7 +49,7 @@ func ownerCommands(bot *bot.RobotoBot, r *handler.Mux) discord.ApplicationComman
 				for i := range app.Team.Members {
 					member := members[i]
 					if user.ID == member.User.ID {
-						next(e)
+						return next(e)
 					}
 				}
 
