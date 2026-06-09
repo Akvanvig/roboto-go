@@ -8,6 +8,8 @@
 - Improve search
     - Fix livestreams
 
+- Use remote cipher server
+
 ## Config example
 
 ```yaml
