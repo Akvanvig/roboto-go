@@ -297,22 +297,6 @@ func (h *MusicHandler) onSkip(data discord.SlashCommandInteractionData, e *handl
 		number = 1
 	}
 
-	tracks, err := h.Player.Queue(e.Ctx, *e.GuildID())
-	if err != nil {
-		return e.CreateMessage(discord.MessageCreate{
-			Embeds: Embeds("Failed to skip current song(s)", MessageColorError),
-			Flags:  discord.MessageFlagEphemeral,
-		})
-	}
-
-	// NOTE:
-	// We have to check the queue first to see if the skip number exceeds the current length.
-	// If it exceeds, we have to set it manually, lest lavaqueue will only skip a single song.
-	queued := len(tracks)
-	if number > queued {
-		number = queued
-	}
-
 	track, err := h.Player.Skip(e.Ctx, *e.GuildID(), number)
 	if err != nil {
 		return e.CreateMessage(discord.MessageCreate{
