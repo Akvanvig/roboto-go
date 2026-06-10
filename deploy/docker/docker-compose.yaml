@@ -24,8 +24,22 @@ services:
       - ./plugins/:/opt/Lavalink/plugins/
     networks:
       - streaming
+      - streaming_cipher
     expose:
       - 2333
+  cipher:
+    image: ghcr.io/kikkia/yt-cipher:master
+    container_name: cipher
+    restart: unless-stopped
+    environment:
+      - PORT=8001
+      - API_TOKEN=supersecret
+    networks:
+      - streaming_cipher
+    expose:
+      - 8001
 networks:
   streaming:
     name: lavalink_stream
+  streaming_cipher:
+    name: cipher_stream

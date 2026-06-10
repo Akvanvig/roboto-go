@@ -8,9 +8,9 @@ plugins:
     allowSearch: true
     allowDirectVideoIds: true
     allowDirectPlaylistIds: true
-    #oauth:
-    #  enabled: true
-    #  refreshToken: ""
+    oauth:
+      enabled: true
+      refreshToken: ""
     clients:
       - MUSIC
       - TV
@@ -19,6 +19,9 @@ plugins:
       - WEBEMBEDDED
       - MWEB
       - ANDROID_VR
+    remoteCipher:
+      url: "http://cipher:8001" # The base URL of your remote cipher server.
+      password: "supersecret" # The password to authenticate with your remote cipher server. 
 
 lavalink:
   plugins:
