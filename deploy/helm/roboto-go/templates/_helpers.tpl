@@ -71,7 +71,6 @@ app.kubernetes.io/name: {{ include "roboto-go.name" . }}-lavalink
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-
 {{/*
 Create the name of the service account to use
 */}}
@@ -88,4 +87,41 @@ autogenerate very secure, totally secret password :)
 */}}
 {{- define "roboto-go.lavalinkPassword" -}}
 password123
+{{- end }}
+
+{{/*
+adjust lavalink config with variables from helm
+*/}}
+{{- define "roboto-go.lavalinkConfig" }}
+{{- $config := .Values.lavalink.config }}
+{{- /* override remote-ciphers */}}
+{{- if .Values.ytCipher.enabled }}
+{{- $remoteCipherConfig := dig "plugins" "youtube" "remoteCipher" (dict) $config }}
+{{- $_ := set $remoteCipherConfig "url" (printf "http://%s-yt-cipher.%s.svc.cluster.local:%s" ( include "roboto-go.name" .) .Release.Namespace (.Values.ytCipher.service.port | toString)) }}
+{{- $override := dict "plugins" (dict "youtube" ( dict "remoteCipher" $remoteCipherConfig) ) }}
+{{- $config = merge $config $override }}
+{{- end }}
+{{- /* return config */}}
+{{- $config | toYaml }}
+{{- end }}
+
+
+{{/*
+labels - yt-cipher
+*/}}
+{{- define "roboto-go.labelsYtCipher" -}}
+helm.sh/chart: {{ include "roboto-go.chart" . }}
+{{ include "roboto-go.selectorLabelsYtCipher" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+{{/*
+Selector labels yt-cipher
+*/}}
+{{- define "roboto-go.selectorLabelsYtCipher" -}}
+app.kubernetes.io/name: {{ include "roboto-go.name" . }}-yt-cipher
+app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
