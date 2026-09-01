@@ -40,6 +40,9 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          ports:
+          - containerPort: {{ .Values.ytCipher.service.port }}
+            name: http
           image: "{{ .Values.ytCipher.image.repository }}:{{ .Values.ytCipher.image.tag }}"
           imagePullPolicy: {{ .Values.ytCipher.image.pullPolicy }}
           {{- with .Values.ytCipher.env }}

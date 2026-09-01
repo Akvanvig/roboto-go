@@ -15,7 +15,7 @@ spec:
     - from:
         - podSelector:
             matchLabels:
-              {{- include "roboto-go.selectorLabels" . | nindent 14 }}
+              {{- include "roboto-go.selectorLabelsLavalink" . | nindent 14 }}
       ports:
         - port: {{- .Values.ytCipher.service.port }}
   egress: []
