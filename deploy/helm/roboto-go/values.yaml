@@ -242,6 +242,40 @@ lavalink:
           max-file-size: 1GB
           max-history: 30
 
+ytCipher:
+  enabled: true
+  image:
+    repository: "ghcr.io/kikkia/yt-cipher"
+    tag: "master"
+    pullPolicy: "Always"
+  service:
+    type: ClusterIP
+    port: 8081
+  networkPolicy:
+    enabled: true
+  replicaCount: 1
+  podSecurityContext: {}
+  securityContext:
+    privileged: false
+    allowPrivilegeEscalation: false
+  podAnnotations: []
+  podLabels: []
+  env: []
+  livenessProbe: {}
+  readinessProbe: {}
+  resources: {}
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+  volumeMounts: []
+  volumes: []
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+
 ollama:
   server: http://192.168.0.100:11434
   chatPath: /api/chat
