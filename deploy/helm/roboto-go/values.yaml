@@ -160,8 +160,9 @@ lavalink:
           - ANDROID_VR
     lavalink:
       plugins:
-        - dependency: "dev.lavalink.youtube:youtube-plugin:1.18.1"
-          snapshot: false
+        - dependency: "dev.lavalink.youtube:youtube-plugin:f45bbb7aebfcbc1c553769e04af6cd43afa8b7c3"
+          snapshot: true
+          repository: "https://maven.lavalink.dev/snapshots"
         - dependency: "com.github.topi314.lavaqueue:lavaqueue-plugin:494692e"
           repository: "https://maven.topi.wtf/snapshots"
           snapshot: false
@@ -250,7 +251,7 @@ ytCipher:
     pullPolicy: "Always"
   service:
     type: ClusterIP
-    port: 8081
+    port: 8001
   networkPolicy:
     enabled: true
   replicaCount: 1
@@ -260,13 +261,15 @@ ytCipher:
     allowPrivilegeEscalation: false
   podAnnotations: []
   podLabels: []
-  env: []
+  env:
+    - name: OVERRIDE_SCRIPT_VARIANT
+      value: "IAS"
   livenessProbe: {}
   readinessProbe: {}
   resources: {}
     # limits:
-    #   cpu: 100m
-    #   memory: 128Mi
+    #   cpu: 1000m
+    #   memory: 512Mi
     # requests:
     #   cpu: 100m
     #   memory: 128Mi
